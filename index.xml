@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Xploiter</title>
+    <link>https://xpldotjs.github.io/</link>
+    <description>Recent content on Xploiter</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Sat, 21 Aug 2021 13:11:23 +0545</lastBuildDate><atom:link href="https://xpldotjs.github.io/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Compiler Notes</title>
+      <link>https://xpldotjs.github.io/posts/compiler-notes/</link>
+      <pubDate>Sat, 21 Aug 2021 13:11:23 +0545</pubDate>
+      
+      <guid>https://xpldotjs.github.io/posts/compiler-notes/</guid>
+      <description>Introduction to Compiler Three types of translater
+ Compiler =&amp;gt; used in High level language Interpreter =&amp;gt; used in High level language Assembler =&amp;gt; used in Assembly language  Why study compiler design not interpreter compilation:
+ translate source code into object code as whole It create object file execution is fast Program is not required to translate each time to run Error diagonosis is poor Most HLL uses compiler  Interpreter:</description>
+    </item>
+    
+    <item>
+      <title>V8 Notes</title>
+      <link>https://xpldotjs.github.io/posts/v8-notes/</link>
+      <pubDate>Sat, 21 Aug 2021 00:25:23 +0545</pubDate>
+      
+      <guid>https://xpldotjs.github.io/posts/v8-notes/</guid>
+      <description>Overview This is just a note to better understand the V8 Turbofan. This note heavily relies on other blogpost which are mentioned in the References section.
+IR An intermediate representation is a representation of a program “between” the source and target languages. A good IR is one that is fairly independent of the source and target languages, so that it maximizes its ability to be used in a retargetable compiler. Ignition collects the profiling information or feedback about the inputs to certain operations during execution.</description>
+    </item>
+    
+    <item>
+      <title>Babychrome Linectf</title>
+      <link>https://xpldotjs.github.io/posts/babychrome-linectf/</link>
+      <pubDate>Fri, 20 Aug 2021 22:38:57 +0545</pubDate>
+      
+      <guid>https://xpldotjs.github.io/posts/babychrome-linectf/</guid>
+      <description>Patch diff --git a/src/compiler/simplified-lowering.cc b/src/compiler/simplified-lowering.cc index da7d0b0fde..f91eea1693 100644 --- a/src/compiler/simplified-lowering.cc +++ b/src/compiler/simplified-lowering.cc @@ -186,12 +186,12 @@ bool CanOverflowSigned32(const Operator* op, Type left, Type right, // We assume the inputs are checked Signed32 (or known statically to be  // Signed32). Technically, the inputs could also be minus zero, which we treat  // as 0 for the purpose of this function. - if (left.Maybe(Type::MinusZero())) { - left = Type::Union(left, type_cache-&amp;gt;kSingletonZero, type_zone); - } - if (right.</description>
+    </item>
+    
+    <item>
+      <title>V8 Issue 2046</title>
+      <link>https://xpldotjs.github.io/posts/v8-issue-2046/</link>
+      <pubDate>Tue, 29 Jun 2021 14:24:17 +0545</pubDate>
+      
+      <guid>https://xpldotjs.github.io/posts/v8-issue-2046/</guid>
+      <description>Introduction +++ title = &amp;ldquo;Creating a New Theme&amp;rdquo; tags = [&amp;ldquo;hugo&amp;rdquo;, &amp;ldquo;themes&amp;rdquo;] date = &amp;ldquo;2014-09-28&amp;rdquo; +++
+Introduction </description>
+    </item>
+    
+    <item>
+      <title>Part 1 Windows Kernel Exploitation Stack Overflow</title>
+      <link>https://xpldotjs.github.io/posts/part-1-windows-kernel-exploitation-stack-overflow/</link>
+      <pubDate>Sun, 21 Mar 2021 18:25:48 +0545</pubDate>
+      
+      <guid>https://xpldotjs.github.io/posts/part-1-windows-kernel-exploitation-stack-overflow/</guid>
+      <description>Intro This is my first time looking into Kernel Exploitation so i decided to practice on HEVD Driver by @hacksys. I&amp;rsquo;ve written this blog post to better understand the kernel space and upgrade my skills. Since this is my first time doing kernel exploitation, i&amp;rsquo;ll be going with the stack overflow. Our setup is:
+ Windows 10 x64 bit HEVD 3.0 Windbg Preview IDA  Looking into source code Because i&amp;rsquo;m rookie on kernel exploitation, i want to look at the source code before reversing the driver.</description>
+    </item>
+    
+  </channel>
+</rss>
