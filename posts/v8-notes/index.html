@@ -471,12 +471,16 @@ In addition, the type of the constant value <code>10 (x0)</code> is <code>Range(
 </code></pre></div><p><code>AddRanger</code> function calculates the min and max bound of <code>Range</code>.</p>
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-C++" data-lang="C++">Type OperationTyper<span style="color:#f92672">::</span>AddRanger(<span style="color:#66d9ef">double</span> lhs_min, <span style="color:#66d9ef">double</span> lhs_max, <span style="color:#66d9ef">double</span> rhs_min,
                                <span style="color:#66d9ef">double</span> rhs_max) {
-  <span style="color:#66d9ef">double</span> results[<span style="color:#ae81ff">4</span>];
-  results[<span style="color:#ae81ff">0</span>] <span style="color:#f92672">=</span> lhs_min <span style="color:#f92672">+</span> rhs_min;
-  results[<span style="color:#ae81ff">1</span>] <span style="color:#f92672">=</span> lhs_min <span style="color:#f92672">+</span> rhs_max;
-  results[<span style="color:#ae81ff">2</span>] <span style="color:#f92672">=</span> lhs_max <span style="color:#f92672">+</span> rhs_min;
-  results[<span style="color:#ae81ff">3</span>] <span style="color:#f92672">=</span> lhs_max <span style="color:#f92672">+</span> rhs_max;
-  <span style="color:#75715e">// Since none of the inputs can be -0, the result cannot be -0 either.
+  <span style="color:#75715e">// lhs = (5,10)
+</span><span style="color:#75715e"></span>  <span style="color:#75715e">// rhs = (2,3)
+</span><span style="color:#75715e"></span>  <span style="color:#75715e">// lhs_min = 5, lhs_max = 10
+</span><span style="color:#75715e"></span>  <span style="color:#75715e">// rhs_min = 2, rhs_max = 3
+</span><span style="color:#75715e"></span>  <span style="color:#66d9ef">double</span> results[<span style="color:#ae81ff">4</span>];
+  results[<span style="color:#ae81ff">0</span>] <span style="color:#f92672">=</span> lhs_min <span style="color:#f92672">+</span> rhs_min; <span style="color:#75715e">// 5 + 2 = 7
+</span><span style="color:#75715e"></span>  results[<span style="color:#ae81ff">1</span>] <span style="color:#f92672">=</span> lhs_min <span style="color:#f92672">+</span> rhs_max; <span style="color:#75715e">// 5 + 3 = 8
+</span><span style="color:#75715e"></span>  results[<span style="color:#ae81ff">2</span>] <span style="color:#f92672">=</span> lhs_max <span style="color:#f92672">+</span> rhs_min; <span style="color:#75715e">// 10 + 2 = 12
+</span><span style="color:#75715e"></span>  results[<span style="color:#ae81ff">3</span>] <span style="color:#f92672">=</span> lhs_max <span style="color:#f92672">+</span> rhs_max; <span style="color:#75715e">// 10 + 3 = 13
+</span><span style="color:#75715e"></span>  <span style="color:#75715e">// Since none of the inputs can be -0, the result cannot be -0 either.
 </span><span style="color:#75715e"></span>  <span style="color:#75715e">// However, it can be nan (the sum of two infinities of opposite sign).
 </span><span style="color:#75715e"></span>  <span style="color:#75715e">// On the other hand, if none of the &#34;results&#34; above is nan, then the
 </span><span style="color:#75715e"></span>  <span style="color:#75715e">// actual result cannot be nan either.
@@ -485,7 +489,9 @@ In addition, the type of the constant value <code>10 (x0)</code> is <code>Range(
     <span style="color:#66d9ef">if</span> (std<span style="color:#f92672">::</span>isnan(results[i])) <span style="color:#f92672">++</span>nans;
   }
   <span style="color:#66d9ef">if</span> (nans <span style="color:#f92672">==</span> <span style="color:#ae81ff">4</span>) <span style="color:#66d9ef">return</span> Type<span style="color:#f92672">::</span>NaN();
-  Type type <span style="color:#f92672">=</span> Type<span style="color:#f92672">::</span>Range(array_min(results, <span style="color:#ae81ff">4</span>), array_max(results, <span style="color:#ae81ff">4</span>), zone());
+  <span style="color:#75715e">// array_min = 7, array_max = 13
+</span><span style="color:#75715e"></span>  <span style="color:#75715e">// Range(7, 13)
+</span><span style="color:#75715e"></span>  Type type <span style="color:#f92672">=</span> Type<span style="color:#f92672">::</span>Range(array_min(results, <span style="color:#ae81ff">4</span>), array_max(results, <span style="color:#ae81ff">4</span>), zone());
   <span style="color:#66d9ef">if</span> (nans <span style="color:#f92672">&gt;</span> <span style="color:#ae81ff">0</span>) type <span style="color:#f92672">=</span> Type<span style="color:#f92672">::</span>Union(type, Type<span style="color:#f92672">::</span>NaN(), zone());
   <span style="color:#75715e">// Examples:
 </span><span style="color:#75715e"></span>  <span style="color:#75715e">//   [-inf, -inf] + [+inf, +inf] = NaN
