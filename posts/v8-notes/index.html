@@ -64,7 +64,7 @@ IR An intermediate representation is a representation of a program “between”
   <title>clock</title>
   <circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline>
 </svg>
-          7 min read
+          10 min read
         </div>
         <div>
           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tag">
@@ -133,7 +133,7 @@ python -m SimpleHTTPServer
 <li>optimizing compiler can only eliminate an expression if it knows for sure that this expression won’t cause any observable side effects and doesn’t raise exceptions</li>
 <li>In case of optimization, let&rsquo;s see for only numbers, it put checks in place to check that values such as x and y are numbers, if either of these checks
 fails it go back to interpreting the bytecode instead (Deoptimization).</li>
-<li>The feedback collected by Igniation is stored in Feedback Vector. Feedback Vector data structure is linked from the closure and contains slots to store
+<li>The feedback collected by Ignition is stored in Feedback Vector. Feedback Vector data structure is linked from the closure and contains slots to store
 different kinds of feedback, i.e., bisets, closure, or hidden classes, depending on the concrete inline cache. The closure also links to the SharedFunctionInfo, which contains the general information about the functions such as source position, bytecode, strict/sloppy mode etc. There is a link to the context as well, which contains the values for the free variables of the functiohn and provides access to the global object (i.e., the <code>&lt;iframe&gt;</code> specific data structure)</li>
 <li>In case of the add function, Feedback Vector has one interesting slot i.e., BinaryOp slot, where binary operations like <code>+, -, *</code>, etc. can record feedback about the inputs and outputs that were seen so far.</li>
 <li>Feedback vector of a specific closure can be seen by using <code>%DebugPrint()</code> function.</li>
@@ -149,8 +149,20 @@ different kinds of feedback, i.e., bisets, closure, or hidden classes, depending
 </code></pre></div></li>
 </ol>
 <h4 id="sea-of-nodes">Sea of Nodes</h4>
-<p>Turbofan works with <code>Sea of Nodes</code> and each nodes is indicates as part of graph. Nodes represents arithemetic operations, load, stores, calls, constants etc. Each node produces a value. Also each node points to its operand. For instance, 2+3=5. In this case the node points to 2 and 3.
-Three types of edges are:</p>
+<p>Turbofan works with <code>Sea of Nodes</code> and each nodes is indicates as part of graph. Nodes represents arithemetic operations, load, stores, calls, constants etc. Each node produces a value. Also each node points to its operand. For instance, 2+3=5. In this case the node points to 2 and 3.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-C++" data-lang="C++"><span style="color:#75715e">// A Node is the basic primitive of graphs. Nodes are chained together by
+</span><span style="color:#75715e">// input/use chains but by default otherwise contain only an identifying number
+</span><span style="color:#75715e">// which specific applications of graphs and nodes can use to index auxiliary
+</span><span style="color:#75715e">// out-of-line data, especially transient data.
+</span><span style="color:#75715e">//
+</span><span style="color:#75715e">// In addition Nodes only contain a mutable Operator that may change during
+</span><span style="color:#75715e">// compilation, e.g. during lowering passes. Other information that needs to be
+</span><span style="color:#75715e">// associated with Nodes during compilation must be stored out-of-line indexed
+</span><span style="color:#75715e">// by the Node&#39;s id.
+</span><span style="color:#75715e"></span>
+<span style="color:#75715e">// NodeIds are identifying numbers for nodes that can be used to index auxiliary
+</span><span style="color:#75715e">// out-of-line data associated with each node.
+</span></code></pre></div><p>Three types of edges are:</p>
 <ol>
 <li>Control edges
 Control edges enables branches and loops.</li>
@@ -271,7 +283,125 @@ Type Type<span style="color:#f92672">::</span>Constant(<span style="color:#66d9e
   RunPrintAndVerify(TyperPhase<span style="color:#f92672">::</span>phase_name());
 <span style="display:block;width:100%;background-color:#3c3d38">  Run<span style="color:#f92672">&lt;</span>TypedLoweringPhase<span style="color:#f92672">&gt;</span>();
 </span>  RunPrintAndVerify(TypedLoweringPhase<span style="color:#f92672">::</span>phase_name());
-</code></pre></div><h3 id="references">References</h3>
+</code></pre></div><p>There are more reducer in this Phase.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-C++" data-lang="C++"><span style="color:#66d9ef">struct</span> <span style="color:#a6e22e">TypedLoweringPhase</span> {
+  DECL_PIPELINE_PHASE_CONSTANTS(TypedLowering)
+
+  <span style="color:#66d9ef">void</span> Run(PipelineData<span style="color:#f92672">*</span> data, Zone<span style="color:#f92672">*</span> temp_zone) {
+    <span style="color:#75715e">// ...
+</span><span style="color:#75715e"></span>    AddReducer(data, <span style="color:#f92672">&amp;</span>graph_reducer, <span style="color:#f92672">&amp;</span>dead_code_elimination);
+
+    <span style="color:#66d9ef">if</span> (<span style="color:#f92672">!</span>data<span style="color:#f92672">-&gt;</span>info()<span style="color:#f92672">-&gt;</span>IsNativeContextIndependent()) {
+      AddReducer(data, <span style="color:#f92672">&amp;</span>graph_reducer, <span style="color:#f92672">&amp;</span>create_lowering);
+    }
+    AddReducer(data, <span style="color:#f92672">&amp;</span>graph_reducer, <span style="color:#f92672">&amp;</span>constant_folding_reducer);
+    AddReducer(data, <span style="color:#f92672">&amp;</span>graph_reducer, <span style="color:#f92672">&amp;</span>typed_lowering);
+    AddReducer(data, <span style="color:#f92672">&amp;</span>graph_reducer, <span style="color:#f92672">&amp;</span>typed_optimization);
+    AddReducer(data, <span style="color:#f92672">&amp;</span>graph_reducer, <span style="color:#f92672">&amp;</span>simple_reducer);
+    AddReducer(data, <span style="color:#f92672">&amp;</span>graph_reducer, <span style="color:#f92672">&amp;</span>checkpoint_elimination);
+    AddReducer(data, <span style="color:#f92672">&amp;</span>graph_reducer, <span style="color:#f92672">&amp;</span>common_reducer);
+    <span style="color:#75715e">// ...
+</span><span style="color:#75715e"></span>  }
+};
+
+<span style="color:#75715e">// AddReducer Function
+</span><span style="color:#75715e"></span>
+<span style="color:#66d9ef">void</span> <span style="color:#a6e22e">AddReducer</span>(PipelineData<span style="color:#f92672">*</span> data, GraphReducer<span style="color:#f92672">*</span> graph_reducer,
+                Reducer<span style="color:#f92672">*</span> reducer) {
+  <span style="color:#66d9ef">if</span> (data<span style="color:#f92672">-&gt;</span>info()<span style="color:#f92672">-&gt;</span>source_positions()) {
+    SourcePositionWrapper<span style="color:#f92672">*</span> <span style="color:#66d9ef">const</span> wrapper <span style="color:#f92672">=</span>
+        data<span style="color:#f92672">-&gt;</span>graph_zone()<span style="color:#f92672">-&gt;</span>New<span style="color:#f92672">&lt;</span>SourcePositionWrapper<span style="color:#f92672">&gt;</span>(
+            reducer, data<span style="color:#f92672">-&gt;</span>source_positions());
+    reducer <span style="color:#f92672">=</span> wrapper;
+  }
+  <span style="color:#66d9ef">if</span> (data<span style="color:#f92672">-&gt;</span>info()<span style="color:#f92672">-&gt;</span>trace_turbo_json()) {
+    NodeOriginsWrapper<span style="color:#f92672">*</span> <span style="color:#66d9ef">const</span> wrapper <span style="color:#f92672">=</span>
+        data<span style="color:#f92672">-&gt;</span>graph_zone()<span style="color:#f92672">-&gt;</span>New<span style="color:#f92672">&lt;</span>NodeOriginsWrapper<span style="color:#f92672">&gt;</span>(reducer,
+                                                    data<span style="color:#f92672">-&gt;</span>node_origins());
+    reducer <span style="color:#f92672">=</span> wrapper;
+  }
+
+  graph_reducer<span style="color:#f92672">-&gt;</span>AddReducer(reducer);
+}
+
+</code></pre></div><p>For feneral understanding purpose we&rsquo;ll inspect the <code>TypedOptimization</code> reducer. We&rsquo;ll look at code inside <code>TypedOptimization::Reduce</code>. We can see there is a switch statement with huge number of cases, for instance, if the visited node&rsquo;s <code>opcode()</code> is <code>kSpeculativeNumberAdd</code> it&rsquo;ll call <code>ReduceSpeculativeNumberAdd(node)</code> function.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-C++" data-lang="C++">Reduction TypedOptimization<span style="color:#f92672">::</span>Reduce(Node<span style="color:#f92672">*</span> node) {
+  DisallowHeapAccessIf <span style="color:#a6e22e">no_heap_access</span>(<span style="color:#f92672">!</span>FLAG_turbo_direct_heap_access);
+  <span style="color:#66d9ef">switch</span> (node<span style="color:#f92672">-&gt;</span>opcode()) {
+    <span style="color:#66d9ef">case</span> IrOpcode<span style="color:#f92672">::</span>kConvertReceiver:
+      <span style="color:#66d9ef">return</span> ReduceConvertReceiver(node);
+    <span style="color:#66d9ef">case</span> IrOpcode<span style="color:#f92672">::</span>kMaybeGrowFastElements:
+      <span style="color:#66d9ef">return</span> ReduceMaybeGrowFastElements(node);
+    <span style="color:#66d9ef">case</span> IrOpcode<span style="color:#f92672">::</span>kCheckHeapObject:
+      <span style="color:#66d9ef">return</span> ReduceCheckHeapObject(node);
+    <span style="color:#75715e">// ...
+</span><span style="display:block;width:100%;background-color:#3c3d38"><span style="color:#75715e"></span>    <span style="color:#66d9ef">case</span> IrOpcode<span style="color:#f92672">::</span>kSpeculativeNumberAdd:
+</span><span style="display:block;width:100%;background-color:#3c3d38">      <span style="color:#66d9ef">return</span> ReduceSpeculativeNumberAdd(node);
+</span>    <span style="color:#75715e">// ...
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">default</span><span style="color:#f92672">:</span>
+      <span style="color:#66d9ef">break</span>;
+  }
+  <span style="color:#66d9ef">return</span> <span style="color:#a6e22e">NoChange</span>();
+}
+<span style="color:#75715e">// ReduceSpeculativeNumberAdd Function
+</span><span style="color:#75715e"></span>Reduction TypedOptimization<span style="color:#f92672">::</span>ReduceSpeculativeNumberAdd(Node<span style="color:#f92672">*</span> node) {
+  Node<span style="color:#f92672">*</span> <span style="color:#66d9ef">const</span> lhs <span style="color:#f92672">=</span> NodeProperties<span style="color:#f92672">::</span>GetValueInput(node, <span style="color:#ae81ff">0</span>);
+  Node<span style="color:#f92672">*</span> <span style="color:#66d9ef">const</span> rhs <span style="color:#f92672">=</span> NodeProperties<span style="color:#f92672">::</span>GetValueInput(node, <span style="color:#ae81ff">1</span>);
+  Type <span style="color:#66d9ef">const</span> lhs_type <span style="color:#f92672">=</span> NodeProperties<span style="color:#f92672">::</span>GetType(lhs);
+  Type <span style="color:#66d9ef">const</span> rhs_type <span style="color:#f92672">=</span> NodeProperties<span style="color:#f92672">::</span>GetType(rhs);
+  NumberOperationHint hint <span style="color:#f92672">=</span> NumberOperationHintOf(node<span style="color:#f92672">-&gt;</span>op());
+  <span style="color:#66d9ef">if</span> ((hint <span style="color:#f92672">==</span> NumberOperationHint<span style="color:#f92672">::</span>kNumber <span style="color:#f92672">||</span>
+       hint <span style="color:#f92672">==</span> NumberOperationHint<span style="color:#f92672">::</span>kNumberOrOddball) <span style="color:#f92672">&amp;&amp;</span>
+      BothAre(lhs_type, rhs_type, Type<span style="color:#f92672">::</span>PlainPrimitive()) <span style="color:#f92672">&amp;&amp;</span>
+      NeitherCanBe(lhs_type, rhs_type, Type<span style="color:#f92672">::</span>StringOrReceiver())) {
+    <span style="color:#75715e">// SpeculativeNumberAdd(x:-string, y:-string) =&gt;
+</span><span style="color:#75715e"></span>    <span style="color:#75715e">//     NumberAdd(ToNumber(x), ToNumber(y))
+</span><span style="color:#75715e"></span>    Node<span style="color:#f92672">*</span> <span style="color:#66d9ef">const</span> toNum_lhs <span style="color:#f92672">=</span> ConvertPlainPrimitiveToNumber(lhs);
+    Node<span style="color:#f92672">*</span> <span style="color:#66d9ef">const</span> toNum_rhs <span style="color:#f92672">=</span> ConvertPlainPrimitiveToNumber(rhs);
+    Node<span style="color:#f92672">*</span> <span style="color:#66d9ef">const</span> value <span style="color:#f92672">=</span>
+        graph()<span style="color:#f92672">-&gt;</span>NewNode(simplified()<span style="color:#f92672">-&gt;</span>NumberAdd(), toNum_lhs, toNum_rhs);
+    ReplaceWithValue(node, value);
+    <span style="color:#66d9ef">return</span> <span style="color:#a6e22e">Replace</span>(value);
+  }
+  <span style="color:#66d9ef">return</span> <span style="color:#a6e22e">NoChange</span>();
+}
+</code></pre></div><p>In <code>ReduceSpeculativeNumberAdd</code> function if both <code>lhs and rhs</code> Node has hint of <code>NumberOperationHint::kNumber</code> and both the <code>lhs_type and rhs_type</code> are <code>Type::PlainPrimitive</code> the <code>SpeculativeNumberAdd</code> function will be replaced by the <code>NumberAdd</code>.</p>
+<p>Also, in <code>JSTypedLowering::ReduceJSCall</code> when <code>JSTypedLowering</code> reducer visits the <code>JSCall</code> node, turbo fan simply creates a <code>LoadField</code> node and replace opcode of the <code>JSCall</code> node to <code>Call</code> opcode.
+<code>ChangeOp</code> means change opcode.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-C++" data-lang="C++">Reduction JSTypedLowering<span style="color:#f92672">::</span>ReduceJSCall(Node<span style="color:#f92672">*</span> node) {
+    <span style="color:#75715e">// [...]
+</span><span style="color:#75715e"></span>    <span style="color:#75715e">// Load the context from the {target}.
+</span><span style="display:block;width:100%;background-color:#3c3d38"><span style="color:#75715e"></span>    Node<span style="color:#f92672">*</span> context <span style="color:#f92672">=</span> effect <span style="color:#f92672">=</span> graph()<span style="color:#f92672">-&gt;</span>NewNode(
+</span><span style="display:block;width:100%;background-color:#3c3d38">        simplified()<span style="color:#f92672">-&gt;</span>LoadField(AccessBuilder<span style="color:#f92672">::</span>ForJSFunctionContext()), target,
+</span><span style="display:block;width:100%;background-color:#3c3d38">        effect, control);
+</span><span style="display:block;width:100%;background-color:#3c3d38">    NodeProperties<span style="color:#f92672">::</span>ReplaceContextInput(node, context);
+</span>
+    <span style="color:#75715e">// Update the effect dependency for the {node}.
+</span><span style="color:#75715e"></span>    NodeProperties<span style="color:#f92672">::</span>ReplaceEffectInput(node, effect);
+
+    <span style="color:#75715e">// [...]
+</span><span style="color:#75715e"></span>    } <span style="color:#66d9ef">else</span> <span style="color:#a6e22e">if</span> (shared<span style="color:#f92672">-&gt;</span>HasBuiltinId()) {
+      DCHECK(Builtins<span style="color:#f92672">::</span>HasJSLinkage(shared<span style="color:#f92672">-&gt;</span>builtin_id()));
+      <span style="color:#75715e">// Patch {node} to a direct code object call.
+</span><span style="color:#75715e"></span>      Callable callable <span style="color:#f92672">=</span> Builtins<span style="color:#f92672">::</span>CallableFor(
+          isolate(), <span style="color:#66d9ef">static_cast</span><span style="color:#f92672">&lt;</span>Builtins<span style="color:#f92672">::</span>Name<span style="color:#f92672">&gt;</span>(shared<span style="color:#f92672">-&gt;</span>builtin_id()));
+      CallDescriptor<span style="color:#f92672">::</span>Flags flags <span style="color:#f92672">=</span> CallDescriptor<span style="color:#f92672">::</span>kNeedsFrameState;
+
+      <span style="color:#66d9ef">const</span> CallInterfaceDescriptor<span style="color:#f92672">&amp;</span> descriptor <span style="color:#f92672">=</span> callable.descriptor();
+      <span style="color:#66d9ef">auto</span> call_descriptor <span style="color:#f92672">=</span> Linkage<span style="color:#f92672">::</span>GetStubCallDescriptor(
+          graph()<span style="color:#f92672">-&gt;</span>zone(), descriptor, <span style="color:#ae81ff">1</span> <span style="color:#f92672">+</span> arity, flags);
+      Node<span style="color:#f92672">*</span> stub_code <span style="color:#f92672">=</span> jsgraph()<span style="color:#f92672">-&gt;</span>HeapConstant(callable.code());
+      node<span style="color:#f92672">-&gt;</span>RemoveInput(n.FeedbackVectorIndex());
+      node<span style="color:#f92672">-&gt;</span>InsertInput(graph()<span style="color:#f92672">-&gt;</span>zone(), <span style="color:#ae81ff">0</span>, stub_code);  <span style="color:#75715e">// Code object.
+</span><span style="color:#75715e"></span>      node<span style="color:#f92672">-&gt;</span>InsertInput(graph()<span style="color:#f92672">-&gt;</span>zone(), <span style="color:#ae81ff">2</span>, new_target);
+      node<span style="color:#f92672">-&gt;</span>InsertInput(graph()<span style="color:#f92672">-&gt;</span>zone(), <span style="color:#ae81ff">3</span>, jsgraph()<span style="color:#f92672">-&gt;</span>Constant(arity));
+<span style="display:block;width:100%;background-color:#3c3d38">      NodeProperties<span style="color:#f92672">::</span>ChangeOp(node, common()<span style="color:#f92672">-&gt;</span>Call(call_descriptor));
+</span>    }
+    <span style="color:#75715e">// [...]
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">return</span> <span style="color:#a6e22e">Changed</span>(node);
+  }
+</code></pre></div><h3 id="range-types">Range Types</h3>
+<h3 id="references">References</h3>
 <p><a href="https://doar-e.github.io/blog/2019/01/28/introduction-to-turbofan/">https://doar-e.github.io/blog/2019/01/28/introduction-to-turbofan/</a></p>
 
     </div>
