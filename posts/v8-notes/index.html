@@ -540,7 +540,7 @@ In addition, the type of the constant value <code>10 (x0)</code> is <code>Range(
 </span><span style="display:block;width:100%;background-color:#3c3d38"><span style="color:#75715e"></span>      <span style="color:#66d9ef">case</span> IrOpcode<span style="color:#f92672">::</span>kCheckBounds:
 </span><span style="display:block;width:100%;background-color:#3c3d38">        <span style="color:#66d9ef">return</span> VisitCheckBounds<span style="color:#f92672">&lt;</span>T<span style="color:#f92672">&gt;</span>(node, lowering);
 </span>      <span style="color:#75715e">// [...]
-</span></code></pre></div><p>As we can see in the <code>VisitCheckBounds</code>, <code>index_type</code> is type of input edge 0 and <code>length_type</code> is type of input edge 1. Also, if the minimum value of <code>index_type</code> is greater or equal to <code>0.0</code> and maximum of <code>index_type</code> is less than the minimum value of <code>length_type</code> the <code>new_flags</code> will set to <code>CheckBoundsFlags::kAbortOnOutOfBounds</code>. Which means the checkbound is not eliminated and the <code>opcode</code> of the node is changed into <code>CheckedUint32Bounds</code>.</p>
+</span></code></pre></div><p>As we can see in the <code>VisitCheckBounds</code>, <code>index_type</code> is type of input edge 0 and <code>length_type</code> is type of input edge 1. Also, if the minimum value of <code>index_type</code> is greater or equal to <code>0.0</code> and maximum of <code>index_type</code> is less than the minimum value of <code>length_type</code> the <code>new_flags</code> will set to <code>CheckBoundsFlags::kAbortOnOutOfBounds</code>. Which means the checkbound is not eliminated and the <code>opcode</code> of the node is changed into <code>CheckedUint32Bounds</code>. Search <code>kCheckUint32Bounds</code> for more details.</p>
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-C++" data-lang="C++">  <span style="color:#66d9ef">template</span> <span style="color:#f92672">&lt;</span>Phase T<span style="color:#f92672">&gt;</span>
   <span style="color:#66d9ef">void</span> VisitCheckBounds(Node<span style="color:#f92672">*</span> node, SimplifiedLowering<span style="color:#f92672">*</span> lowering) {
     CheckBoundsParameters <span style="color:#66d9ef">const</span><span style="color:#f92672">&amp;</span> p <span style="color:#f92672">=</span> CheckBoundsParametersOf(node<span style="color:#f92672">-&gt;</span>op());
@@ -579,8 +579,7 @@ In addition, the type of the constant value <code>10 (x0)</code> is <code>Range(
       }
       <span style="color:#75715e">// [...]
 </span><span style="color:#75715e"></span>  }
-</code></pre></div><p>In the <code>EffectControlLinearizer::LowerCheckedUint32Bounds</code>, it&rsquo;ll lower to the <code>Uint32LessThan</code>. <code>kDeoptOnOutOfBounds</code> will determine whether or not to determine whether the overflow deopt; There is if else statement in the following code, if the <code>params.flags()</code> is not <code>CheckBoundsFlag::kAbortOnOutOfBounds</code> it&rsquo;ll call <code>DeoptimizeIfNot</code> which basically <code>deoptimizes</code> except if the DeoptimizeReason is <code>kOutOfBounds</code> i.e., no deoptimization in case of out-of-bound. Instead it&rsquo;ll reach to unrechable node.
-kAbortOnOutOfBounds mode is for if_abort(overflow) administered directly to the state Unreachableas a successor, Unreachablethe node will follow InstructionSelector be breakpointsubstituted with:</p>
+</code></pre></div><p>In the <code>EffectControlLinearizer::LowerCheckedUint32Bounds</code>, it&rsquo;ll lower <code>CheckBounds</code> to the <code>Uint32LessThan</code>. <code>kDeoptOnOutOfBounds</code> will determine whether or not to determine whether the overflow deopt; There is if else statement in the following code, if the <code>params.flags()</code> is not <code>CheckBoundsFlag::kAbortOnOutOfBounds</code> it&rsquo;ll call <code>DeoptimizeIfNot</code> which basically <code>deoptimizes</code> except if the DeoptimizeReason is <code>kOutOfBounds</code> i.e., no deoptimization in case of out-of-bound. Instead it&rsquo;ll reach to unrechable node.</p>
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-C++" data-lang="C++"><span style="color:#75715e">// src/compiler/effect-control-linearizer.cc
 </span><span style="color:#75715e"></span>Node<span style="color:#f92672">*</span> EffectControlLinearizer<span style="color:#f92672">::</span>LowerCheckedUint32Bounds(Node<span style="color:#f92672">*</span> node,
                                                         Node<span style="color:#f92672">*</span> frame_state) {
@@ -612,6 +611,24 @@ kAbortOnOutOfBounds mode is for if_abort(overflow) administered directly to the 
 </span><span style="color:#75715e"></span><span style="color:#66d9ef">void</span> InstructionSelector<span style="color:#f92672">::</span>VisitUnreachable(Node<span style="color:#f92672">*</span> node) {
   OperandGenerator <span style="color:#a6e22e">g</span>(<span style="color:#66d9ef">this</span>);
   Emit(kArchDebugBreak, g.NoOutput());
+}
+
+<span style="color:#75715e">// Emit function
+</span><span style="color:#75715e"></span>Instruction<span style="color:#f92672">*</span> InstructionSelector<span style="color:#f92672">::</span>Emit(
+    InstructionCode opcode, size_t output_count, InstructionOperand<span style="color:#f92672">*</span> outputs,
+    size_t input_count, InstructionOperand<span style="color:#f92672">*</span> inputs, size_t temp_count,
+    InstructionOperand<span style="color:#f92672">*</span> temps) {
+  <span style="color:#66d9ef">if</span> (output_count <span style="color:#f92672">&gt;=</span> Instruction<span style="color:#f92672">::</span>kMaxOutputCount <span style="color:#f92672">||</span>
+      input_count <span style="color:#f92672">&gt;=</span> Instruction<span style="color:#f92672">::</span>kMaxInputCount <span style="color:#f92672">||</span>
+      temp_count <span style="color:#f92672">&gt;=</span> Instruction<span style="color:#f92672">::</span>kMaxTempCount) {
+    set_instruction_selection_failed();
+    <span style="color:#66d9ef">return</span> <span style="color:#66d9ef">nullptr</span>;
+  }
+  <span style="color:#75715e">// opcode = KArchDebugBreak
+</span><span style="color:#75715e"></span>  Instruction<span style="color:#f92672">*</span> instr <span style="color:#f92672">=</span>
+      Instruction<span style="color:#f92672">::</span>New(instruction_zone(), opcode, output_count, outputs,
+                       input_count, inputs, temp_count, temps);
+  <span style="color:#66d9ef">return</span> <span style="color:#a6e22e">Emit</span>(instr);
 }
 </code></pre></div><h3 id="references">References</h3>
 <p><a href="https://doar-e.github.io/blog/2019/01/28/introduction-to-turbofan/">https://doar-e.github.io/blog/2019/01/28/introduction-to-turbofan/</a></p>
