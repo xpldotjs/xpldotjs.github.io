@@ -219,7 +219,7 @@ index 5717c70348..8cca161ad5 100644
 <span style="color:#a6e22e">console</span>.<span style="color:#a6e22e">log</span>(<span style="color:#a6e22e">trigger</span>(<span style="color:#e6db74">&#34;bug&#34;</span>));
 <span style="color:#f92672">%</span><span style="color:#a6e22e">OptimizeFunctionOnNextCall</span>(<span style="color:#a6e22e">trigger</span>);
 <span style="color:#a6e22e">console</span>.<span style="color:#a6e22e">log</span>(<span style="color:#a6e22e">trigger</span>(<span style="color:#e6db74">&#34;bug&#34;</span>));
-</code></pre></div><p>The <code>if</code> statement in the above code is to make <code>phi</code> node, because if the arithmetic expression is <code>2.2 + 1 + 1</code> it&rsquo;ll directly get optimized for the constant in <code>TypedLoweringPhase</code> using <code>ConstantFoldingReducer</code>.
+</code></pre></div><p>The <code>if</code> statement in the above code is to make <code>phi</code> node, because if the arithmetic expression is <code>2.2 + 1 + 1</code> it&rsquo;ll directly get optimized for the constant in <code>TypedLoweringPhase</code> using <code>ConstantFoldingReducer</code>. Also the <code>NumberAdd</code> appears only if two numeric types  are different i.e, <code>1.1 + 1</code>.
 As we can see in the following image we can see that the <code>const1</code> is <code>1</code> and <code>const2</code> is <code>1</code>, which is <code>1 + 1</code> from the above code. At line no <code>61</code> it&rsquo;ll get added and create a new <code>const_node</code>.</p>
 <p><img src="/posts/static/DoubleAdditionReducer/003-trigger-001.png" alt="001-trigger"></p>
 <p>Now let&rsquo;s build the POC using the precision loss fault.</p>
