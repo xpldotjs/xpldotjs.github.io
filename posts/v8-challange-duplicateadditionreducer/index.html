@@ -64,7 +64,7 @@ Building Challenge V8 mkdir v8 cd v8 fetch v8 cd v8 git reset --hard dde25872f58
   <title>clock</title>
   <circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline>
 </svg>
-          3 min read
+          4 min read
         </div>
         <div>
           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tag">
@@ -195,7 +195,20 @@ index 5717c70348..8cca161ad5 100644
      AddReducer(data, &amp;graph_reducer, &amp;constant_folding_reducer);
      AddReducer(data, &amp;graph_reducer, &amp;typed_optimization);
 </code></pre></div><h3 id="the-bug">The Bug</h3>
-<p>As we can see the</p>
+<p><code>kNumberConstant</code> uses the type of <code>double</code>.The maximum safe integer in JavaScript (2^53 - 1) and <code>Number.MAX_SAFE_INTEGER</code> constant represents it which means in this range the integers are safe to be represented and compared. So as the value grows it looses the precision, (2^53) is where it begins to loose it precision of 1.</p>
+<p>In addtion,Double precision uses a total of 64 bits to encode the sign, exponent, and fractional parts. In IEEE 754 doubles, the sign is encoded using 1 bit, the exponent uses 11 bits, and the remaining 52 bits are mantissa (mantissa are the fractional of number). In normal floating point values, the fractional part ranges between 1.0 and 1.111111… up to the limits of precision. This means that the leading digit before the point is always 1, so only the fraction part after the point has to be encoded, in 52 bits. In other words, the fractional part has 53 significant binary digits: the leading digit is implicit, the remaining 52 digits are stored explicitly.</p>
+<p><img src="/posts/static/DoubleAdditionReducer/IEEE_754_Double_Floating_Point_Format.png" alt="IEEE_754_DOUBLE_FLOATING_POINT"></p>
+<p>For instance, let&rsquo;s see if the there will be loss of precision or not:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-js" data-lang="js"><span style="color:#f92672">&gt;</span>   <span style="color:#a6e22e">x</span> <span style="color:#f92672">=</span> Number.<span style="color:#a6e22e">MAX_SAFE_INTEGER</span> <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>
+<span style="color:#ae81ff">9007199254740992</span>
+<span style="color:#f92672">&gt;</span>   <span style="color:#a6e22e">y</span> <span style="color:#f92672">=</span> <span style="color:#a6e22e">x</span> <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span> <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>
+<span style="color:#ae81ff">9007199254740992</span>
+<span style="color:#f92672">&gt;</span>   <span style="color:#a6e22e">z</span> <span style="color:#f92672">=</span> <span style="color:#a6e22e">x</span> <span style="color:#f92672">+</span> <span style="color:#ae81ff">2</span>
+<span style="color:#ae81ff">9007199254740994</span>
+<span style="color:#f92672">&gt;</span>   <span style="color:#a6e22e">y</span> <span style="color:#f92672">==</span> <span style="color:#a6e22e">z</span>
+<span style="color:#66d9ef">false</span>
+</code></pre></div><p>So we can see that the <code>x + 1 + 1</code> is not equal to <code>x + 2</code> which is mathematically wrong and will be problemetic.</p>
+<h3 id="writing-poc">Writing POC</h3>
 
     </div>
     <div class="post-footer">
