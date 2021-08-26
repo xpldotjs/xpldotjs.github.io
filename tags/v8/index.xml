@@ -6,7 +6,16 @@
     <description>Recent content in v8 on Xploiter</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Sat, 21 Aug 2021 00:25:23 +0545</lastBuildDate><atom:link href="https://xpldotjs.github.io/tags/v8/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Thu, 26 Aug 2021 00:58:14 +0545</lastBuildDate><atom:link href="https://xpldotjs.github.io/tags/v8/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>V8 Challange DuplicateAdditionReducer</title>
+      <link>https://xpldotjs.github.io/posts/v8-challange-duplicateadditionreducer/</link>
+      <pubDate>Thu, 26 Aug 2021 00:58:14 +0545</pubDate>
+      
+      <guid>https://xpldotjs.github.io/posts/v8-challange-duplicateadditionreducer/</guid>
+      <description>Introduction mov eax, 1 add eax, 2 </description>
+    </item>
+    
     <item>
       <title>V8 Notes</title>
       <link>https://xpldotjs.github.io/posts/v8-notes/</link>

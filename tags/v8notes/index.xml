@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>v8notes on Xploiter</title>
+    <link>https://xpldotjs.github.io/tags/v8notes/</link>
+    <description>Recent content in v8notes on Xploiter</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Sat, 21 Aug 2021 00:25:23 +0545</lastBuildDate><atom:link href="https://xpldotjs.github.io/tags/v8notes/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>V8 Notes</title>
+      <link>https://xpldotjs.github.io/posts/v8-notes/</link>
+      <pubDate>Sat, 21 Aug 2021 00:25:23 +0545</pubDate>
+      
+      <guid>https://xpldotjs.github.io/posts/v8-notes/</guid>
+      <description>Overview This is just a note to better understand the V8 Turbofan. This note heavily relies on other blogpost which are mentioned in the References section.
+IR An intermediate representation is a representation of a program “between” the source and target languages. A good IR is one that is fairly independent of the source and target languages, so that it maximizes its ability to be used in a retargetable compiler. Ignition collects the profiling information or feedback about the inputs to certain operations during execution.</description>
+    </item>
+    
+  </channel>
+</rss>
