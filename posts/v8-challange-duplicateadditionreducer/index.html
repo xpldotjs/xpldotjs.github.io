@@ -64,7 +64,7 @@ Building Challenge V8 mkdir v8 cd v8 fetch v8 cd v8 ./build/install-build-deps.s
   <title>clock</title>
   <circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline>
 </svg>
-          8 min read
+          12 min read
         </div>
         <div>
           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tag">
@@ -234,8 +234,10 @@ As we can see in the following image we can see that the <code>const1</code> is 
 <span style="color:#a6e22e">console</span>.<span style="color:#a6e22e">log</span>(<span style="color:#a6e22e">trigger</span>(<span style="color:#e6db74">&#34;bug&#34;</span>));
 <span style="color:#f92672">%</span><span style="color:#a6e22e">OptimizeFunctionOnNextCall</span>(<span style="color:#a6e22e">trigger</span>);
 <span style="color:#a6e22e">console</span>.<span style="color:#a6e22e">log</span>(<span style="color:#a6e22e">trigger</span>(<span style="color:#e6db74">&#34;bug&#34;</span>));
-</code></pre></div><p>In the <code>TyperPhase</code> CheckBounds is generated with type Range(2,3).</p>
+</code></pre></div><h4 id="typerphase">TyperPhase</h4>
+<p>In the <code>TyperPhase</code> CheckBounds is generated with type Range(2,3).</p>
 <p><img src="/posts/static/DoubleAdditionReducer/004-typer.png" alt="002-typer"></p>
+<h4 id="typedloweringphase">TypedLoweringPhase</h4>
 <p>When i looked into the <code>TypedLoweringPhase</code>, the range was <code>Range(9007199254740991,9007199254740992)</code> after the the <code>NumberAdd</code> is performed on the <code>phi</code> node and the <code>NumberConstant</code> node in Turbofan. But the actual range is <code>Range(9007199254740991,9007199254740994)</code> which enable us to perform oob. So i wanted to know why the <code>rhs</code> value <code>9007199254740992</code> is not updated to <code>9007199254740994</code> after the addition i.e., <code>9007199254740992 + 2</code>.</p>
 <p><img src="/posts/static/DoubleAdditionReducer/012-typed-lowering.png" alt="003-typedlowering"></p>
 <p>So i put the breakpoint on <code>OperationTyper::NumberAdd</code> and <code>OperationTyper::AddRanger</code>.</p>
@@ -267,7 +269,7 @@ As we can see in the following image we can see that the <code>const1</code> is 
   <span style="color:#66d9ef">if</span> (maybe_nan) type <span style="color:#f92672">=</span> Type<span style="color:#f92672">::</span>Union(type, Type<span style="color:#f92672">::</span>NaN(), zone());
   <span style="color:#66d9ef">return</span> type;
 }
-</code></pre></div><p>Function <code>AddRanger</code>:</p>
+</code></pre></div><p>Function <code>AddRanger</code>, in this function 4 addition is performed and stored in the <code>results</code> double array.</p>
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-C++" data-lang="C++"><span style="color:#75715e">// src/compiler/operation-typer.cc
 </span><span style="color:#75715e"></span>Type OperationTyper<span style="color:#f92672">::</span>AddRanger(<span style="color:#66d9ef">double</span> lhs_min, <span style="color:#66d9ef">double</span> lhs_max, <span style="color:#66d9ef">double</span> rhs_min,
                                <span style="color:#66d9ef">double</span> rhs_max) {
@@ -294,10 +296,159 @@ As we can see in the following image we can see that the <code>const1</code> is 
 </span><span style="color:#75715e"></span>  <span style="color:#75715e">//   [-inf, m] + [n, +inf] = [-inf, +inf] \/ NaN
 </span><span style="color:#75715e"></span>  <span style="color:#66d9ef">return</span> type;
 }
-</code></pre></div><p>Here in escape analysis phase, after the LoadElimination the <code>LoadField</code> is replaced by <code>NumberConstant</code> with <code>Range(5,5)</code> which is the length of an array.
-<img src="/posts/static/DoubleAdditionReducer/007-escape-analysis.png" alt="002-escape-analysis"></p>
-<p>Now we can see that the <code>CheckBounds</code> is eliminate in the <code>Simplified Lowering</code> phase.
-<img src="/posts/static/DoubleAdditionReducer/005-simplified-lowering.png" alt="003-simplified-lowering"></p>
+</code></pre></div><p>In our case,</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plain" data-lang="plain">1. lhs_min = 9007199254740989
+2. lhs_max = 9007199254740992
+3. rhs_min = 2
+4. rhs_max = 2
+</code></pre></div><p>Addition,</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plain" data-lang="plain">1. lhs_min + rhs_min = 9007199254740989 + 2 = 9007199254740991
+2. lhs_min + rhs_max = 9007199254740989 + 2 = 9007199254740991
+3. lhs_max + rhs_min = 9007199254740992 + 2 = 9007199254740994
+4. lhs_max + rhs_max = 9007199254740992 + 2 = 9007199254740994
+</code></pre></div><p>Min and Max Range,</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plain" data-lang="plain">array_min(results,4) = 9007199254740991
+array_max(resutls,4) = 9007199254740994
+</code></pre></div><p>Indeed the <code>AddRanger</code> function retured type range <code>Range(9007199254740991, 9007199254740994)</code>.</p>
+<p><img src="/posts/static/DoubleAdditionReducer/010-range.png" alt="range"></p>
+<p>But why the range in the turbofan showing <code>Range(9007199254740991, 9007199254740992)</code> instead of <code>Range(9007199254740991, 9007199254740994)</code>?</p>
+<p>I&rsquo;m not sure but after few hours of debugging I found that the <code>NumberAdd</code> function is being called from the <code>TypeNarrowingReducer::Reduce</code> Function.</p>
+<p><img src="/posts/static/DoubleAdditionReducer/012-typed-narrowing-reducer.png" alt="TypeNarrowing"></p>
+<p>After the <code>NumberAdd</code> function returns, it&rsquo;ll reach at the code which is highlighted below:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-C++" data-lang="C++">TypeNarrowingReducer<span style="color:#f92672">::</span>TypeNarrowingReducer(Editor<span style="color:#f92672">*</span> editor, JSGraph<span style="color:#f92672">*</span> jsgraph,
+                                           JSHeapBroker<span style="color:#f92672">*</span> broker)
+    <span style="color:#f92672">:</span> AdvancedReducer(editor), jsgraph_(jsgraph), op_typer_(broker, zone()) {}
+
+TypeNarrowingReducer<span style="color:#f92672">::~</span>TypeNarrowingReducer() <span style="color:#f92672">=</span> <span style="color:#66d9ef">default</span>;
+
+Reduction TypeNarrowingReducer<span style="color:#f92672">::</span>Reduce(Node<span style="color:#f92672">*</span> node) {
+  DisallowHeapAccess no_heap_access;
+
+  Type new_type <span style="color:#f92672">=</span> Type<span style="color:#f92672">::</span>Any();
+
+  <span style="color:#66d9ef">switch</span> (node<span style="color:#f92672">-&gt;</span>opcode()) {
+    <span style="color:#66d9ef">case</span> IrOpcode<span style="color:#f92672">::</span>kNumberLessThan: {
+<span style="color:#75715e">/// [...]
+</span><span style="color:#75715e"></span><span style="color:#75715e">#define DECLARE_CASE(Name)                                                \
+</span><span style="color:#75715e">  case IrOpcode::k##Name: {                                               \
+</span><span style="color:#75715e">    new_type = op_typer_.Name(NodeProperties::GetType(node-&gt;InputAt(0)),  \
+</span><span style="color:#75715e">                              NodeProperties::GetType(node-&gt;InputAt(1))); \
+</span><span style="color:#75715e">    break;                                                                \
+</span><span style="color:#75715e">  }
+</span><span style="color:#75715e"></span>      SIMPLIFIED_NUMBER_BINOP_LIST(DECLARE_CASE)       
+      DECLARE_CASE(SameValue)
+<span style="color:#75715e">#undef DECLARE_CASE
+</span><span style="color:#75715e"></span>
+<span style="color:#75715e">// [...]
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">default</span><span style="color:#f92672">:</span>
+      <span style="color:#66d9ef">return</span> NoChange();
+  }
+
+<span style="display:block;width:100%;background-color:#3c3d38">  Type original_type <span style="color:#f92672">=</span> NodeProperties<span style="color:#f92672">::</span>GetType(node);
+</span>  Type <span style="color:#66d9ef">restricted</span> <span style="color:#f92672">=</span> Type<span style="color:#f92672">::</span>Intersect(new_type, original_type, zone());
+  <span style="color:#66d9ef">if</span> (<span style="color:#f92672">!</span>original_type.Is(<span style="color:#66d9ef">restricted</span>)) {
+    NodeProperties<span style="color:#f92672">::</span>SetType(node, <span style="color:#66d9ef">restricted</span>);
+    <span style="color:#66d9ef">return</span> <span style="color:#a6e22e">Changed</span>(node);
+  }
+  <span style="color:#66d9ef">return</span> <span style="color:#a6e22e">NoChange</span>();
+}
+</code></pre></div><p>The two variable <code>new_type</code> and <code>original_type</code> are important variables. <code>new_types</code> is the returned <code>type</code> value from the <code>NumberAdd</code> function i.e, <code>Range(9007199254740991, 9007199254740994)</code>. And the <code>original_type</code> is the original type before the optimization <code>Range(9007199254740991, 9007199254740992)</code> because <code>9007199254740992 + 1 + 1</code> was <code>9007199254740992</code> before optimization.</p>
+<p>before optimization:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-js" data-lang="js"><span style="color:#f92672">&gt;</span>   <span style="color:#ae81ff">9007199254740992</span> <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span> <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>
+<span style="color:#ae81ff">9007199254740992</span>
+</code></pre></div><p>after optimization:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-js" data-lang="js"><span style="color:#f92672">&gt;</span>   <span style="color:#ae81ff">9007199254740992</span> <span style="color:#f92672">+</span> <span style="color:#ae81ff">2</span>
+<span style="color:#ae81ff">9007199254740994</span>
+</code></pre></div><p>But the interesting part is this code</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-C++" data-lang="C++">Type <span style="color:#66d9ef">restricted</span> <span style="color:#f92672">=</span> Type<span style="color:#f92672">::</span>Intersect(new_type, original_type, zone());
+</code></pre></div><p>Inside the <code>intersect</code> function, in our case, in semi-fast case checks the function returned type2.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-C++" data-lang="C++">Type Type<span style="color:#f92672">::</span>Intersect(Type type1, Type type2, Zone<span style="color:#f92672">*</span> zone) {
+  <span style="color:#75715e">// Fast case: bit sets.
+</span><span style="color:#75715e"></span>  <span style="color:#66d9ef">if</span> (type1.IsBitset() <span style="color:#f92672">&amp;&amp;</span> type2.IsBitset()) {
+    <span style="color:#66d9ef">return</span> <span style="color:#a6e22e">NewBitset</span>(type1.AsBitset() <span style="color:#f92672">&amp;</span> type2.AsBitset());
+  }
+
+  <span style="color:#75715e">// Fast case: top or bottom types.
+</span><span style="color:#75715e"></span>  <span style="color:#66d9ef">if</span> (type1.IsNone() <span style="color:#f92672">||</span> type2.IsAny()) <span style="color:#66d9ef">return</span> type1;  <span style="color:#75715e">// Shortcut.
+</span><span style="color:#75715e"></span>  <span style="color:#66d9ef">if</span> (type2.IsNone() <span style="color:#f92672">||</span> type1.IsAny()) <span style="color:#66d9ef">return</span> type2;  <span style="color:#75715e">// Shortcut.
+</span><span style="color:#75715e"></span>
+  <span style="color:#75715e">// Semi-fast case.
+</span><span style="display:block;width:100%;background-color:#3c3d38"><span style="color:#75715e"></span>  <span style="color:#66d9ef">if</span> (type1.Is(type2)) <span style="color:#66d9ef">return</span> type1; <span style="color:#75715e">// false
+</span></span><span style="display:block;width:100%;background-color:#3c3d38"><span style="color:#75715e"></span>  <span style="color:#66d9ef">if</span> (type2.Is(type1)) <span style="color:#66d9ef">return</span> type2; <span style="color:#75715e">// true; returned type2.
+</span></span><span style="color:#75715e"></span>
+  <span style="color:#75715e">// [...]
+</span><span style="color:#75715e"></span>}
+</code></pre></div><p>I was quite confused why the <code>type1</code> is not <code>type2</code> and why the <code>type2</code> is <code>type1</code>. Then i put the breakpoint on <code>Type::SlowIs</code> function.
+Here, <code>type1</code> is <code>new_type</code> and <code>type2</code> is <code>original_type</code>.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-C++" data-lang="C++"><span style="color:#66d9ef">bool</span> Type<span style="color:#f92672">::</span>SlowIs(Type that) <span style="color:#66d9ef">const</span> {
+
+  <span style="color:#75715e">// [...]
+</span><span style="display:block;width:100%;background-color:#3c3d38"><span style="color:#75715e"></span>
+</span><span style="display:block;width:100%;background-color:#3c3d38">  <span style="color:#66d9ef">if</span> (that.IsRange()) {
+</span>    <span style="color:#66d9ef">return</span> <span style="color:#66d9ef">this</span><span style="color:#f92672">-&gt;</span>IsRange() <span style="color:#f92672">&amp;&amp;</span> Contains(that.AsRange(), <span style="color:#66d9ef">this</span><span style="color:#f92672">-&gt;</span>AsRange());
+  }
+
+  <span style="color:#75715e">// [...]
+</span><span style="color:#75715e"></span>}
+</code></pre></div><p>In <code>SlowIs</code> function, <code>that</code> is the type that we passed inside <code>Is</code> function. <code>this</code> is the <code>original</code> type here.</p>
+<ol>
+<li>when <code>that</code> is <code>type2</code> i.e., <code>type1.Is(type2)</code>, the <code>Contains</code> function returns false</li>
+<li>when <code>that</code> is <code>type1</code> i.e., <code>type2.Is(type1)</code>, it <code>Contains</code> returns true.</li>
+</ol>
+<p>Function <code>Type::Contains</code>:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-C++" data-lang="C++"><span style="color:#66d9ef">bool</span> Type<span style="color:#f92672">::</span>Contains(<span style="color:#66d9ef">const</span> RangeType<span style="color:#f92672">*</span> lhs, <span style="color:#66d9ef">const</span> RangeType<span style="color:#f92672">*</span> rhs) {
+  DisallowHeapAllocation no_allocation;
+  <span style="color:#66d9ef">return</span> lhs<span style="color:#f92672">-&gt;</span>Min() <span style="color:#f92672">&lt;=</span> rhs<span style="color:#f92672">-&gt;</span>Min() <span style="color:#f92672">&amp;&amp;</span> rhs<span style="color:#f92672">-&gt;</span>Max() <span style="color:#f92672">&lt;=</span> lhs<span style="color:#f92672">-&gt;</span>Max();
+}
+</code></pre></div><p>When the value <code>this</code> and <code>that</code> is passed inside the <code>Contains</code> function.</p>
+<ol>
+<li><code>that</code> = <code>lhs</code></li>
+<li><code>this</code> = <code>rhs</code></li>
+</ol>
+<h5 id="case-type1istype2">Case: type1.Is(type2)</h5>
+<p>In this case <code>this</code> is the <code>type1</code> and <code>that</code> is the <code>type2</code>. Also,</p>
+<ol>
+<li><code>that</code> = <code>lhs</code> = <code>type2</code> = <code>original_type</code></li>
+<li><code>this</code> = <code>rhs</code> = <code>type1</code> = <code>new_type</code></li>
+</ol>
+<p><img src="/posts/static/DoubleAdditionReducer/013-contains-type2.png" alt="istype2"></p>
+<p>In our case, as of the <code>Contains</code> function</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plain" data-lang="plain">1. minimum of type2 must be less than or equal to minimum of type1. // true
+2. maximum of type1 must be less than or equal to maximum of type2. // false
+</code></pre></div><p>So one of the condition didn&rsquo;t meet which is why <code>type1.Is(type2)</code> is false in this case.</p>
+<h5 id="case-type2istype1">Case: type2.Is(type1)</h5>
+<p>In this case <code>this</code> is the <code>type2</code> and <code>that</code> is the <code>type1</code>. Also,</p>
+<ol>
+<li><code>that</code> = <code>lhs</code> = <code>type1</code> = <code>new_type</code></li>
+<li><code>this</code> = <code>rhs</code> = <code>type2</code> = <code>original_type</code></li>
+</ol>
+<p><img src="/posts/static/DoubleAdditionReducer/014-contains-type1.png" alt="istype2"></p>
+<p>In our case, as of the <code>Contains</code> function</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plain" data-lang="plain">1. minimum of type1 must be less than or equal to minimum of type2. // true
+2. maximum of type2 must be less than or equal to maximum of type1. // true
+</code></pre></div><p>So both condition met which is why <code>type2.Is(type1)</code> is true in this case.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-C++" data-lang="C++">TypeNarrowingReducer<span style="color:#f92672">::</span>TypeNarrowingReducer(Editor<span style="color:#f92672">*</span> editor, JSGraph<span style="color:#f92672">*</span> jsgraph,
+                                           JSHeapBroker<span style="color:#f92672">*</span> broker)
+    <span style="color:#f92672">:</span> AdvancedReducer(editor), jsgraph_(jsgraph), op_typer_(broker, zone()) {}
+
+  <span style="color:#75715e">// [...]
+</span><span style="color:#75715e"></span>
+  Type original_type <span style="color:#f92672">=</span> NodeProperties<span style="color:#f92672">::</span>GetType(node);
+<span style="display:block;width:100%;background-color:#3c3d38">  Type <span style="color:#66d9ef">restricted</span> <span style="color:#f92672">=</span> Type<span style="color:#f92672">::</span>Intersect(new_type, original_type, zone());
+</span>  <span style="color:#66d9ef">if</span> (<span style="color:#f92672">!</span>original_type.Is(<span style="color:#66d9ef">restricted</span>)) {
+<span style="display:block;width:100%;background-color:#3c3d38">    NodeProperties<span style="color:#f92672">::</span>SetType(node, <span style="color:#66d9ef">restricted</span>);
+</span><span style="display:block;width:100%;background-color:#3c3d38">    <span style="color:#66d9ef">return</span> <span style="color:#a6e22e">Changed</span>(node);
+</span>  }
+  <span style="color:#66d9ef">return</span> <span style="color:#a6e22e">NoChange</span>();
+}
+</code></pre></div><p>So the <code>Type::Intersect</code> retured the <code>type2</code> which is <code>original_type</code> and set it to the <code>restricted</code> variable, i.e, <code>Range(9007199254740991, 9007199254740992)</code>. If the <code>restricted</code> type was not the <code>original_type</code>, <code>restricted</code> type would have been the <code>new_type</code> and the <code>type</code> would have been updated. But in this case the node (<code>NumberAdd</code>) type doesn&rsquo;t changed i.e., <code>Range(9007199254740991, 9007199254740992)</code>.
+In conclusion, if the maximum of <code>new_type</code> was less than the maximum of <code>original_type</code> the <code>type</code> of node <code>NumberAdd</code> would have been changed. Because of the <code>DuplicateAdditionReducer</code> the maxium of <code>new_type</code> was greater than the maximum of <code>original_type</code>. So the <code>type</code> didn&rsquo;t changed.</p>
+<h4 id="escape-analysis">Escape Analysis</h4>
+<p>Here in escape analysis phase, after the LoadElimination the <code>LoadField</code> is replaced by <code>NumberConstant</code> with <code>Range(5,5)</code> which is the length of an array.</p>
+<p><img src="/posts/static/DoubleAdditionReducer/007-escape-analysis.png" alt="002-escape-analysis"></p>
+<h4 id="simplified-lowering">Simplified Lowering</h4>
+<p>Now we can see that the <code>CheckBounds</code> is eliminate in the <code>Simplified Lowering</code> phase.</p>
+<p><img src="/posts/static/DoubleAdditionReducer/005-simplified-lowering.png" alt="003-simplified-lowering"></p>
 <p>This is the code that is responsible for elemination of <code>CheckBounds</code>.</p>
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-C++" data-lang="C++">  <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">VisitCheckBounds</span>(Node<span style="color:#f92672">*</span> node, SimplifiedLowering<span style="color:#f92672">*</span> lowering) {
     CheckParameters <span style="color:#66d9ef">const</span><span style="color:#f92672">&amp;</span> p <span style="color:#f92672">=</span> CheckParametersOf(node<span style="color:#f92672">-&gt;</span>op());
