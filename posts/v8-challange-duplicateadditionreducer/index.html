@@ -226,15 +226,15 @@ As we can see in the following image we can see that the <code>const1</code> is 
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-JS" data-lang="JS"><span style="color:#66d9ef">function</span> <span style="color:#a6e22e">trigger</span>(<span style="color:#a6e22e">x</span>) {
 	<span style="color:#66d9ef">const</span> <span style="color:#a6e22e">arr</span> <span style="color:#f92672">=</span> [<span style="color:#ae81ff">1.1</span>, <span style="color:#ae81ff">1.2</span>, <span style="color:#ae81ff">1.3</span>, <span style="color:#ae81ff">1.4</span>, <span style="color:#ae81ff">1.5</span>]
 	<span style="color:#66d9ef">let</span> <span style="color:#a6e22e">idx</span> <span style="color:#f92672">=</span> (<span style="color:#a6e22e">x</span> <span style="color:#f92672">==</span> <span style="color:#e6db74">&#34;bug&#34;</span> <span style="color:#f92672">?</span> <span style="color:#ae81ff">9007199254740992</span> <span style="color:#f92672">:</span> <span style="color:#ae81ff">9007199254740989</span>);
-	<span style="color:#a6e22e">idx</span> <span style="color:#f92672">=</span> <span style="color:#a6e22e">idx</span> <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span> <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;
-	<span style="color:#a6e22e">idx</span> <span style="color:#f92672">-=</span> <span style="color:#ae81ff">9007199254740989</span>;
+	<span style="color:#a6e22e">idx</span> <span style="color:#f92672">=</span> <span style="color:#a6e22e">idx</span> <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span> <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>;  <span style="color:#75715e">// 
+</span><span style="color:#75715e"></span>	<span style="color:#a6e22e">idx</span> <span style="color:#f92672">-=</span> <span style="color:#ae81ff">9007199254740989</span>;
 	<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">arr</span>[<span style="color:#a6e22e">idx</span>];
 }
 
 <span style="color:#a6e22e">console</span>.<span style="color:#a6e22e">log</span>(<span style="color:#a6e22e">trigger</span>(<span style="color:#e6db74">&#34;bug&#34;</span>));
 <span style="color:#f92672">%</span><span style="color:#a6e22e">OptimizeFunctionOnNextCall</span>(<span style="color:#a6e22e">trigger</span>);
 <span style="color:#a6e22e">console</span>.<span style="color:#a6e22e">log</span>(<span style="color:#a6e22e">trigger</span>(<span style="color:#e6db74">&#34;bug&#34;</span>));
-</code></pre></div><p>In the <code>TyperPhase</code> CheckBounds is generated with tyep Range(2,3).</p>
+</code></pre></div><p>In the <code>TyperPhase</code> CheckBounds is generated with type Range(2,3).</p>
 <p><img src="/posts/static/DoubleAdditionReducer/004-typer.png" alt="002-typer"></p>
 <p>Here in escape analysis phase, after the LoadElimination the <code>LoadField</code> is replaced by <code>NumberConstant</code> with <code>Range(5,5)</code> which is the length of an array.
 <img src="/posts/static/DoubleAdditionReducer/007-escape-analysis.png" alt="002-escape-analysis"></p>
