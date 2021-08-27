@@ -64,7 +64,7 @@ Building Challenge V8 mkdir v8 cd v8 fetch v8 cd v8 ./build/install-build-deps.s
   <title>clock</title>
   <circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline>
 </svg>
-          6 min read
+          8 min read
         </div>
         <div>
           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tag">
@@ -236,7 +236,65 @@ As we can see in the following image we can see that the <code>const1</code> is 
 <span style="color:#a6e22e">console</span>.<span style="color:#a6e22e">log</span>(<span style="color:#a6e22e">trigger</span>(<span style="color:#e6db74">&#34;bug&#34;</span>));
 </code></pre></div><p>In the <code>TyperPhase</code> CheckBounds is generated with type Range(2,3).</p>
 <p><img src="/posts/static/DoubleAdditionReducer/004-typer.png" alt="002-typer"></p>
-<p>Here in escape analysis phase, after the LoadElimination the <code>LoadField</code> is replaced by <code>NumberConstant</code> with <code>Range(5,5)</code> which is the length of an array.
+<p>When i looked into the <code>TypedLoweringPhase</code>, the range was <code>Range(9007199254740991,9007199254740992)</code> after the the <code>NumberAdd</code> is performed on the <code>phi</code> node and the <code>NumberConstant</code> node in Turbofan. But the actual range is <code>Range(9007199254740991,9007199254740994)</code> which enable us to perform oob. So i wanted to know why the <code>rhs</code> value <code>9007199254740992</code> is not updated to <code>9007199254740994</code> after the addition i.e., <code>9007199254740992 + 2</code>.</p>
+<p><img src="/posts/static/DoubleAdditionReducer/012-typed-lowering.png" alt="003-typedlowering"></p>
+<p>So i put the breakpoint on <code>OperationTyper::NumberAdd</code> and <code>OperationTyper::AddRanger</code>.</p>
+<p>Function <code>NumberAdd</code>, in this function we&rsquo;re only interested in function <code>AddRanger</code> to be called.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-C++" data-lang="C++"><span style="color:#75715e">// src/compiler/operation-typer.cc
+</span><span style="color:#75715e"></span>Type OperationTyper<span style="color:#f92672">::</span>NumberAdd(Type lhs, Type rhs) {
+  DCHECK(lhs.Is(Type<span style="color:#f92672">::</span>Number()));
+  DCHECK(rhs.Is(Type<span style="color:#f92672">::</span>Number()));
+
+  <span style="color:#75715e">// [...]
+</span><span style="color:#75715e"></span>  
+  <span style="color:#75715e">// We can give more precise types for integers.
+</span><span style="color:#75715e"></span>  Type type <span style="color:#f92672">=</span> Type<span style="color:#f92672">::</span>None();
+  lhs <span style="color:#f92672">=</span> Type<span style="color:#f92672">::</span>Intersect(lhs, Type<span style="color:#f92672">::</span>PlainNumber(), zone());
+  rhs <span style="color:#f92672">=</span> Type<span style="color:#f92672">::</span>Intersect(rhs, Type<span style="color:#f92672">::</span>PlainNumber(), zone());
+  <span style="color:#66d9ef">if</span> (<span style="color:#f92672">!</span>lhs.IsNone() <span style="color:#f92672">&amp;&amp;</span> <span style="color:#f92672">!</span>rhs.IsNone()) {
+    <span style="color:#66d9ef">if</span> (lhs.Is(cache_.kInteger) <span style="color:#f92672">&amp;&amp;</span> rhs.Is(cache_.kInteger)) {
+<span style="display:block;width:100%;background-color:#3c3d38">      type <span style="color:#f92672">=</span> AddRanger(lhs.Min(), lhs.Max(), rhs.Min(), rhs.Max());
+</span>    } <span style="color:#66d9ef">else</span> {
+      <span style="color:#66d9ef">if</span> ((lhs.Maybe(minus_infinity_) <span style="color:#f92672">&amp;&amp;</span> rhs.Maybe(infinity_)) <span style="color:#f92672">||</span>
+          (rhs.Maybe(minus_infinity_) <span style="color:#f92672">&amp;&amp;</span> lhs.Maybe(infinity_))) {
+        maybe_nan <span style="color:#f92672">=</span> true;
+      }
+      type <span style="color:#f92672">=</span> Type<span style="color:#f92672">::</span>PlainNumber();
+    }
+  }
+  <span style="color:#75715e">// Take into account the -0 and NaN information computed earlier.
+</span><span style="color:#75715e"></span>  <span style="color:#66d9ef">if</span> (maybe_minuszero) type <span style="color:#f92672">=</span> Type<span style="color:#f92672">::</span>Union(type, Type<span style="color:#f92672">::</span>MinusZero(), zone());
+  <span style="color:#66d9ef">if</span> (maybe_nan) type <span style="color:#f92672">=</span> Type<span style="color:#f92672">::</span>Union(type, Type<span style="color:#f92672">::</span>NaN(), zone());
+  <span style="color:#66d9ef">return</span> type;
+}
+</code></pre></div><p>Function <code>AddRanger</code>:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-C++" data-lang="C++"><span style="color:#75715e">// src/compiler/operation-typer.cc
+</span><span style="color:#75715e"></span>Type OperationTyper<span style="color:#f92672">::</span>AddRanger(<span style="color:#66d9ef">double</span> lhs_min, <span style="color:#66d9ef">double</span> lhs_max, <span style="color:#66d9ef">double</span> rhs_min,
+                               <span style="color:#66d9ef">double</span> rhs_max) {
+  <span style="color:#66d9ef">double</span> results[<span style="color:#ae81ff">4</span>];
+  results[<span style="color:#ae81ff">0</span>] <span style="color:#f92672">=</span> lhs_min <span style="color:#f92672">+</span> rhs_min;
+  results[<span style="color:#ae81ff">1</span>] <span style="color:#f92672">=</span> lhs_min <span style="color:#f92672">+</span> rhs_max;
+  results[<span style="color:#ae81ff">2</span>] <span style="color:#f92672">=</span> lhs_max <span style="color:#f92672">+</span> rhs_min;
+  results[<span style="color:#ae81ff">3</span>] <span style="color:#f92672">=</span> lhs_max <span style="color:#f92672">+</span> rhs_max;
+  <span style="color:#75715e">// Since none of the inputs can be -0, the result cannot be -0 either.
+</span><span style="color:#75715e"></span>  <span style="color:#75715e">// However, it can be nan (the sum of two infinities of opposite sign).
+</span><span style="color:#75715e"></span>  <span style="color:#75715e">// On the other hand, if none of the &#34;results&#34; above is nan, then the
+</span><span style="color:#75715e"></span>  <span style="color:#75715e">// actual result cannot be nan either.
+</span><span style="color:#75715e"></span>  <span style="color:#66d9ef">int</span> nans <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
+  <span style="color:#66d9ef">for</span> (<span style="color:#66d9ef">int</span> i <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>; i <span style="color:#f92672">&lt;</span> <span style="color:#ae81ff">4</span>; <span style="color:#f92672">++</span>i) {
+    <span style="color:#66d9ef">if</span> (std<span style="color:#f92672">::</span>isnan(results[i])) <span style="color:#f92672">++</span>nans;
+  }
+  <span style="color:#66d9ef">if</span> (nans <span style="color:#f92672">==</span> <span style="color:#ae81ff">4</span>) <span style="color:#66d9ef">return</span> Type<span style="color:#f92672">::</span>NaN();
+<span style="display:block;width:100%;background-color:#3c3d38">  Type type <span style="color:#f92672">=</span> Type<span style="color:#f92672">::</span>Range(array_min(results, <span style="color:#ae81ff">4</span>), array_max(results, <span style="color:#ae81ff">4</span>), zone());
+</span>  <span style="color:#66d9ef">if</span> (nans <span style="color:#f92672">&gt;</span> <span style="color:#ae81ff">0</span>) type <span style="color:#f92672">=</span> Type<span style="color:#f92672">::</span>Union(type, Type<span style="color:#f92672">::</span>NaN(), zone());
+  <span style="color:#75715e">// Examples:
+</span><span style="color:#75715e"></span>  <span style="color:#75715e">//   [-inf, -inf] + [+inf, +inf] = NaN
+</span><span style="color:#75715e"></span>  <span style="color:#75715e">//   [-inf, -inf] + [n, +inf] = [-inf, -inf] \/ NaN
+</span><span style="color:#75715e"></span>  <span style="color:#75715e">//   [-inf, +inf] + [n, +inf] = [-inf, +inf] \/ NaN
+</span><span style="color:#75715e"></span>  <span style="color:#75715e">//   [-inf, m] + [n, +inf] = [-inf, +inf] \/ NaN
+</span><span style="color:#75715e"></span>  <span style="color:#66d9ef">return</span> type;
+}
+</code></pre></div><p>Here in escape analysis phase, after the LoadElimination the <code>LoadField</code> is replaced by <code>NumberConstant</code> with <code>Range(5,5)</code> which is the length of an array.
 <img src="/posts/static/DoubleAdditionReducer/007-escape-analysis.png" alt="002-escape-analysis"></p>
 <p>Now we can see that the <code>CheckBounds</code> is eliminate in the <code>Simplified Lowering</code> phase.
 <img src="/posts/static/DoubleAdditionReducer/005-simplified-lowering.png" alt="003-simplified-lowering"></p>
