@@ -13,12 +13,14 @@
     
     <meta name="twitter:card" content="summary"/>
 <meta name="twitter:title" content="Turbofan Wrong Type on String indexOf and lastIndexOf"/>
-<meta name="twitter:description" content="Overview In this section we&rsquo;ll be focusing on checkbounds and try to bypass it. The bug used in this section is String.indexOf | String.lastIndexOf bug where the typer computed incorrect type for kIndexOf and kLastIndexOf. This post heavily rely of doar-e blog.
-Setup fetch v8 git reset --hard 8cd4009c5b7072ad224f19a9e668ec0ed7430599 gclient sync tools/dev/gm.py x64.debug ninja -C out/x64.debug d8 CheckBounds "/>
+<meta name="twitter:description" content="Overview In this section we&rsquo;ll be focusing on checkbounds and try to bypass it. The bug used in this section is String.indexOf | String.lastIndexOf bug where the typer computed incorrect type for kStringIndexOf or kStringPrototypeIndexOf and kStringLastIndexOf or kStringPrototypeLastIndexOf. This post heavily rely of doar-e blog.
+Setup fetch v8 git reset --hard 8cd4009c5b7072ad224f19a9e668ec0ed7430599 gclient sync Now we&rsquo;ll apply the patch to enable the lastIndexOf bug. We&rsquo;ll replace this code:
+// src/compiler/typer."/>
 
     <meta property="og:title" content="Turbofan Wrong Type on String indexOf and lastIndexOf" />
-<meta property="og:description" content="Overview In this section we&rsquo;ll be focusing on checkbounds and try to bypass it. The bug used in this section is String.indexOf | String.lastIndexOf bug where the typer computed incorrect type for kIndexOf and kLastIndexOf. This post heavily rely of doar-e blog.
-Setup fetch v8 git reset --hard 8cd4009c5b7072ad224f19a9e668ec0ed7430599 gclient sync tools/dev/gm.py x64.debug ninja -C out/x64.debug d8 CheckBounds " />
+<meta property="og:description" content="Overview In this section we&rsquo;ll be focusing on checkbounds and try to bypass it. The bug used in this section is String.indexOf | String.lastIndexOf bug where the typer computed incorrect type for kStringIndexOf or kStringPrototypeIndexOf and kStringLastIndexOf or kStringPrototypeLastIndexOf. This post heavily rely of doar-e blog.
+Setup fetch v8 git reset --hard 8cd4009c5b7072ad224f19a9e668ec0ed7430599 gclient sync Now we&rsquo;ll apply the patch to enable the lastIndexOf bug. We&rsquo;ll replace this code:
+// src/compiler/typer." />
 <meta property="og:type" content="article" />
 <meta property="og:url" content="https://xpldotjs.github.io/posts/turbofan-wrong-type-on-string-indexof-and-lastindexof/" /><meta property="article:section" content="posts" />
 <meta property="article:published_time" content="2021-08-28T15:37:18+05:45" />
@@ -64,21 +66,70 @@ Setup fetch v8 git reset --hard 8cd4009c5b7072ad224f19a9e668ec0ed7430599 gclient
   <title>clock</title>
   <circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline>
 </svg>
-          1 min read
+          2 min read
         </div>
       </div>
     </header>
     <div class="post-content">
       <h2 id="overview">Overview</h2>
-<p>In this section we&rsquo;ll be focusing on <code>checkbounds</code> and try to bypass it.  The bug used in this section is <a href="https://chromium-review.googlesource.com/c/v8/v8/+/660000/">String.indexOf | String.lastIndexOf bug</a> where the typer computed incorrect type for <code>kIndexOf</code> and <code>kLastIndexOf</code>. This post heavily rely of <a href="https://doar-e.github.io/blog/2019/05/09/circumventing-chromes-hardening-of-typer-bugs/">doar-e</a> blog.</p>
+<p>In this section we&rsquo;ll be focusing on <code>checkbounds</code> and try to bypass it.  The bug used in this section is <a href="https://chromium-review.googlesource.com/c/v8/v8/+/660000/">String.indexOf | String.lastIndexOf bug</a> where the typer computed incorrect type for <code>kStringIndexOf or kStringPrototypeIndexOf</code> and <code>kStringLastIndexOf or kStringPrototypeLastIndexOf</code>. This post heavily rely of <a href="https://doar-e.github.io/blog/2019/05/09/circumventing-chromes-hardening-of-typer-bugs/">doar-e</a> blog.</p>
 <h4 id="setup">Setup</h4>
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">fetch v8
 git reset --hard 8cd4009c5b7072ad224f19a9e668ec0ed7430599
 gclient sync
-tools/dev/gm.py x64.debug
+</code></pre></div><p>Now we&rsquo;ll apply the patch to enable the <code>lastIndexOf</code> bug. We&rsquo;ll replace this code:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-C++" data-lang="C++"><span style="color:#75715e">// src/compiler/typer.cc
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">case</span> Builtins<span style="color:#f92672">::</span>kStringPrototypeLastIndexOf:
+      <span style="color:#66d9ef">return</span> Type<span style="color:#f92672">::</span>Range(<span style="color:#f92672">-</span><span style="color:#ae81ff">1.0</span>, String<span style="color:#f92672">::</span>kMaxLength, t<span style="color:#f92672">-&gt;</span>zone());
+</code></pre></div><p>To</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-C++" data-lang="C++"><span style="color:#75715e">// src/compiler/typer.cc
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">case</span> Builtins<span style="color:#f92672">::</span>kStringPrototypeLastIndexOf:
+      <span style="color:#66d9ef">return</span> Type<span style="color:#f92672">::</span>Range(<span style="color:#f92672">-</span><span style="color:#ae81ff">1.0</span>, String<span style="color:#f92672">::</span>kMaxLength <span style="color:#f92672">-</span> <span style="color:#ae81ff">1.0</span>, t<span style="color:#f92672">-&gt;</span>zone());
+</code></pre></div><p>Now we&rsquo;ll compile the buggy d8 shell.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">tools/dev/gm.py x64.debug
 ninja -C out/x64.debug d8
 </code></pre></div><h4 id="checkbounds">CheckBounds</h4>
-
+<p>Before this <a href="https://chromium.googlesource.com/v8/v8/+/7bb6dc0e06fa158df508bc8997f0fce4e33512a5">commit</a> exploiters were taking advantage of Bound-Check-Elemination to get read-write primitive from the typer bug. As discuss in this <a href="/posts/v8-notes/">post</a>, checkbounds prevents array from accessing index out of range and make sure the index is always less than the length. Prior to this <a href="https://chromium.googlesource.com/v8/v8/+/7bb6dc0e06fa158df508bc8997f0fce4e33512a5">commit</a>, if the index was less than the length the <code>CheckBounds</code> node gets eliminated and removed from during simplified lowering.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-C++" data-lang="C++"><span style="color:#66d9ef">void</span> <span style="color:#a6e22e">VisitCheckBounds</span>(Node<span style="color:#f92672">*</span> node, SimplifiedLowering<span style="color:#f92672">*</span> lowering) {
+    CheckParameters <span style="color:#66d9ef">const</span><span style="color:#f92672">&amp;</span> p <span style="color:#f92672">=</span> CheckParametersOf(node<span style="color:#f92672">-&gt;</span>op());
+    Type <span style="color:#66d9ef">const</span> index_type <span style="color:#f92672">=</span> TypeOf(node<span style="color:#f92672">-&gt;</span>InputAt(<span style="color:#ae81ff">0</span>));
+    Type <span style="color:#66d9ef">const</span> length_type <span style="color:#f92672">=</span> TypeOf(node<span style="color:#f92672">-&gt;</span>InputAt(<span style="color:#ae81ff">1</span>));
+    <span style="color:#75715e">// [...]
+</span><span style="color:#75715e"></span>        <span style="color:#66d9ef">if</span> (lower()) {
+            <span style="color:#66d9ef">if</span> (index_type<span style="color:#f92672">-&gt;</span>Min() <span style="color:#f92672">&gt;=</span> <span style="color:#ae81ff">0.0</span> <span style="color:#f92672">&amp;&amp;</span>
+                index_type<span style="color:#f92672">-&gt;</span>Max() <span style="color:#f92672">&lt;</span> length_type<span style="color:#f92672">-&gt;</span>Min()) {
+              <span style="color:#75715e">// The bounds check is redundant if we already know that
+</span><span style="color:#75715e"></span>              <span style="color:#75715e">// the index is within the bounds of [0.0, length[.
+</span><span style="display:block;width:100%;background-color:#3c3d38"><span style="color:#75715e"></span>              DeferReplacement(node, node<span style="color:#f92672">-&gt;</span>InputAt(<span style="color:#ae81ff">0</span>));
+</span>            }
+          }
+      <span style="color:#75715e">// [...]
+</span><span style="color:#75715e"></span>  }
+</code></pre></div><p>However now it&rsquo;s not the case, instead of eliminating the <code>CheckBounds</code> node, they introduce an aborting bounds checks that crashes rather than deopts. Then It&rsquo;ll lower into the <code>CheckedUint32Bounds</code> while visiting checkbounds in simplified lowering.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-C++" data-lang="C++"><span style="color:#66d9ef">void</span> <span style="color:#a6e22e">VisitCheckBounds</span>(Node<span style="color:#f92672">*</span> node, SimplifiedLowering<span style="color:#f92672">*</span> lowering) {
+    CheckParameters <span style="color:#66d9ef">const</span><span style="color:#f92672">&amp;</span> p <span style="color:#f92672">=</span> CheckParametersOf(node<span style="color:#f92672">-&gt;</span>op());
+    Type <span style="color:#66d9ef">const</span> index_type <span style="color:#f92672">=</span> TypeOf(node<span style="color:#f92672">-&gt;</span>InputAt(<span style="color:#ae81ff">0</span>));
+    Type <span style="color:#66d9ef">const</span> length_type <span style="color:#f92672">=</span> TypeOf(node<span style="color:#f92672">-&gt;</span>InputAt(<span style="color:#ae81ff">1</span>));
+    <span style="color:#75715e">// [...]
+</span><span style="color:#75715e"></span>        <span style="color:#66d9ef">if</span> (lower()) {
+          CheckBoundsParameters<span style="color:#f92672">::</span>Mode mode <span style="color:#f92672">=</span>
+              CheckBoundsParameters<span style="color:#f92672">::</span>kDeoptOnOutOfBounds;
+          <span style="color:#66d9ef">if</span> (lowering<span style="color:#f92672">-&gt;</span>poisoning_level_ <span style="color:#f92672">==</span>
+                  PoisoningMitigationLevel<span style="color:#f92672">::</span>kDontPoison <span style="color:#f92672">&amp;&amp;</span>
+              (index_type.IsNone() <span style="color:#f92672">||</span> length_type.IsNone() <span style="color:#f92672">||</span>
+               (index_type.Min() <span style="color:#f92672">&gt;=</span> <span style="color:#ae81ff">0.0</span> <span style="color:#f92672">&amp;&amp;</span>
+                index_type.Max() <span style="color:#f92672">&lt;</span> length_type.Min()))) {
+            <span style="color:#75715e">// The bounds check is redundant if we already know that
+</span><span style="color:#75715e"></span>            <span style="color:#75715e">// the index is within the bounds of [0.0, length[.
+</span><span style="display:block;width:100%;background-color:#3c3d38"><span style="color:#75715e"></span>            mode <span style="color:#f92672">=</span> CheckBoundsParameters<span style="color:#f92672">::</span>kAbortOnOutOfBounds;
+</span>          }
+<span style="display:block;width:100%;background-color:#3c3d38">          NodeProperties<span style="color:#f92672">::</span>ChangeOp(
+</span><span style="display:block;width:100%;background-color:#3c3d38">              node, simplified()<span style="color:#f92672">-&gt;</span>CheckedUint32Bounds(p.feedback(), mode));
+</span>        }
+      } 
+      <span style="color:#75715e">// [...]
+</span><span style="color:#75715e"></span>  }
+</code></pre></div>
     </div>
     <div class="post-footer">
       
