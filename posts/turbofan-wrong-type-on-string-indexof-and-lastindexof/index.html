@@ -66,7 +66,7 @@ Setup fetch v8 git reset --hard 8cd4009c5b7072ad224f19a9e668ec0ed7430599 gclient
   <title>clock</title>
   <circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline>
 </svg>
-          2 min read
+          3 min read
         </div>
       </div>
     </header>
@@ -90,7 +90,8 @@ gclient sync
 ninja -C out/x64.debug d8
 </code></pre></div><h4 id="checkbounds">CheckBounds</h4>
 <p>Before this <a href="https://chromium.googlesource.com/v8/v8/+/7bb6dc0e06fa158df508bc8997f0fce4e33512a5">commit</a> exploiters were taking advantage of Bound-Check-Elemination to get read-write primitive from the typer bug. As discuss in this <a href="/posts/v8-notes/">post</a>, checkbounds prevents array from accessing index out of range and make sure the index is always less than the length. Prior to this <a href="https://chromium.googlesource.com/v8/v8/+/7bb6dc0e06fa158df508bc8997f0fce4e33512a5">commit</a>, if the index was less than the length the <code>CheckBounds</code> node gets eliminated and removed from during simplified lowering.</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-C++" data-lang="C++"><span style="color:#66d9ef">void</span> <span style="color:#a6e22e">VisitCheckBounds</span>(Node<span style="color:#f92672">*</span> node, SimplifiedLowering<span style="color:#f92672">*</span> lowering) {
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-C++" data-lang="C++"><span style="color:#75715e">// src/compiler/simplified-lowering.cc
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">void</span> <span style="color:#a6e22e">VisitCheckBounds</span>(Node<span style="color:#f92672">*</span> node, SimplifiedLowering<span style="color:#f92672">*</span> lowering) {
     CheckParameters <span style="color:#66d9ef">const</span><span style="color:#f92672">&amp;</span> p <span style="color:#f92672">=</span> CheckParametersOf(node<span style="color:#f92672">-&gt;</span>op());
     Type <span style="color:#66d9ef">const</span> index_type <span style="color:#f92672">=</span> TypeOf(node<span style="color:#f92672">-&gt;</span>InputAt(<span style="color:#ae81ff">0</span>));
     Type <span style="color:#66d9ef">const</span> length_type <span style="color:#f92672">=</span> TypeOf(node<span style="color:#f92672">-&gt;</span>InputAt(<span style="color:#ae81ff">1</span>));
@@ -106,7 +107,8 @@ ninja -C out/x64.debug d8
       <span style="color:#75715e">// [...]
 </span><span style="color:#75715e"></span>  }
 </code></pre></div><p>However now it&rsquo;s not the case, instead of eliminating the <code>CheckBounds</code> node, they introduce an aborting bounds checks that crashes rather than deopts. Then It&rsquo;ll lower into the <code>CheckedUint32Bounds</code> while visiting checkbounds in simplified lowering.</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-C++" data-lang="C++"><span style="color:#66d9ef">void</span> <span style="color:#a6e22e">VisitCheckBounds</span>(Node<span style="color:#f92672">*</span> node, SimplifiedLowering<span style="color:#f92672">*</span> lowering) {
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-C++" data-lang="C++"><span style="color:#75715e">// src/compiler/simplified-lowering.cc
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">void</span> <span style="color:#a6e22e">VisitCheckBounds</span>(Node<span style="color:#f92672">*</span> node, SimplifiedLowering<span style="color:#f92672">*</span> lowering) {
     CheckParameters <span style="color:#66d9ef">const</span><span style="color:#f92672">&amp;</span> p <span style="color:#f92672">=</span> CheckParametersOf(node<span style="color:#f92672">-&gt;</span>op());
     Type <span style="color:#66d9ef">const</span> index_type <span style="color:#f92672">=</span> TypeOf(node<span style="color:#f92672">-&gt;</span>InputAt(<span style="color:#ae81ff">0</span>));
     Type <span style="color:#66d9ef">const</span> length_type <span style="color:#f92672">=</span> TypeOf(node<span style="color:#f92672">-&gt;</span>InputAt(<span style="color:#ae81ff">1</span>));
@@ -129,6 +131,70 @@ ninja -C out/x64.debug d8
       } 
       <span style="color:#75715e">// [...]
 </span><span style="color:#75715e"></span>  }
+</code></pre></div><p>Also the <code>CheckUint32Bounds</code> node gets lowered in <code>a</code>  phase. And in case of out-of-bounds there&rsquo;ll be nodeoptimization instead it&rsquo;ll reach to the <code>Unreachable</code> node.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-C++" data-lang="C++"><span style="color:#75715e">// src/compiler/effect-control-linearizer.cc
+</span><span style="color:#75715e"></span>Node<span style="color:#f92672">*</span> EffectControlLinearizer<span style="color:#f92672">::</span>LowerCheckedUint32Bounds(Node<span style="color:#f92672">*</span> node,
+                                                        Node<span style="color:#f92672">*</span> frame_state) {
+  Node<span style="color:#f92672">*</span> index <span style="color:#f92672">=</span> node<span style="color:#f92672">-&gt;</span>InputAt(<span style="color:#ae81ff">0</span>);
+  Node<span style="color:#f92672">*</span> limit <span style="color:#f92672">=</span> node<span style="color:#f92672">-&gt;</span>InputAt(<span style="color:#ae81ff">1</span>);
+  <span style="color:#66d9ef">const</span> CheckBoundsParameters<span style="color:#f92672">&amp;</span> params <span style="color:#f92672">=</span> CheckBoundsParametersOf(node<span style="color:#f92672">-&gt;</span>op());
+
+  Node<span style="color:#f92672">*</span> check <span style="color:#f92672">=</span> __ Uint32LessThan(index, limit);
+  <span style="color:#66d9ef">switch</span> (params.mode()) {
+      <span style="color:#75715e">// do not deoptimize in case of out-of-bounds
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">case</span> CheckBoundsParameters<span style="color:#f92672">::</span>kDeoptOnOutOfBounds:
+<span style="display:block;width:100%;background-color:#3c3d38">      __ DeoptimizeIfNot(DeoptimizeReason<span style="color:#f92672">::</span>kOutOfBounds,
+</span><span style="display:block;width:100%;background-color:#3c3d38">                         params.check_parameters().feedback(), check,
+</span><span style="display:block;width:100%;background-color:#3c3d38">                         frame_state, IsSafetyCheck<span style="color:#f92672">::</span>kCriticalSafetyCheck);
+</span>      <span style="color:#66d9ef">break</span>;
+      <span style="color:#75715e">// Reach to Unreachable node in case of &#39;kAbortOnOutOfBounds&#39;
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">case</span> CheckBoundsParameters<span style="color:#f92672">::</span>kAbortOnOutOfBounds: {
+      <span style="color:#66d9ef">auto</span> if_abort <span style="color:#f92672">=</span> __ MakeDeferredLabel();
+      <span style="color:#66d9ef">auto</span> done <span style="color:#f92672">=</span> __ MakeLabel();
+
+      __ <span style="color:#a6e22e">Branch</span>(check, <span style="color:#f92672">&amp;</span>done, <span style="color:#f92672">&amp;</span>if_abort);
+
+      __ <span style="color:#a6e22e">Bind</span>(<span style="color:#f92672">&amp;</span>if_abort);
+<span style="display:block;width:100%;background-color:#3c3d38">      __ <span style="color:#a6e22e">Unreachable</span>();
+</span>      __ <span style="color:#a6e22e">Goto</span>(<span style="color:#f92672">&amp;</span>done);
+
+      __ <span style="color:#a6e22e">Bind</span>(<span style="color:#f92672">&amp;</span>done);
+      <span style="color:#66d9ef">break</span>;
+    }
+  }
+
+  <span style="color:#66d9ef">return</span> index;
+}
+</code></pre></div><p>Now if we further dig into the code, we can see that in <code>MachineOperatorReducer::Reduce</code> function <code>Uint32LessThan</code> node can lower to <code>UInt32Constant</code>.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-C++" data-lang="C++"><span style="color:#75715e">// Perform constant folding and strength reduction on machine operators.
+</span><span style="color:#75715e"></span>Reduction MachineOperatorReducer<span style="color:#f92672">::</span>Reduce(Node<span style="color:#f92672">*</span> node) {
+  <span style="color:#66d9ef">switch</span> (node<span style="color:#f92672">-&gt;</span>opcode()) {
+   <span style="color:#75715e">// [...]
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">case</span> IrOpcode<span style="color:#f92672">::</span>kUint32LessThan: {
+      Uint32BinopMatcher <span style="color:#a6e22e">m</span>(node);
+      <span style="color:#66d9ef">if</span> (m.left().Is(kMaxUInt32)) <span style="color:#66d9ef">return</span> ReplaceBool(false);  <span style="color:#75715e">// M &lt; x =&gt; false
+</span><span style="color:#75715e"></span>      <span style="color:#66d9ef">if</span> (m.right().Is(<span style="color:#ae81ff">0</span>)) <span style="color:#66d9ef">return</span> ReplaceBool(false);          <span style="color:#75715e">// x &lt; 0 =&gt; false
+</span><span style="color:#75715e"></span>      <span style="color:#66d9ef">if</span> (m.IsFoldable()) {                                    <span style="color:#75715e">// K &lt; K =&gt; K
+</span><span style="color:#75715e"></span>        <span style="color:#66d9ef">return</span> <span style="color:#a6e22e">ReplaceBool</span>(m.left().Value() <span style="color:#f92672">&lt;</span> m.right().Value());
+      }
+      <span style="color:#66d9ef">if</span> (m.LeftEqualsRight()) <span style="color:#66d9ef">return</span> ReplaceBool(false);  <span style="color:#75715e">// x &lt; x =&gt; false
+</span><span style="color:#75715e"></span>      <span style="color:#66d9ef">if</span> (m.left().IsWord32Sar() <span style="color:#f92672">&amp;&amp;</span> m.right().HasValue()) {
+        Int32BinopMatcher <span style="color:#a6e22e">mleft</span>(m.left().node());
+        <span style="color:#66d9ef">if</span> (mleft.right().HasValue()) {
+          <span style="color:#75715e">// (x &gt;&gt; K) &lt; C =&gt; x &lt; (C &lt;&lt; K)
+</span><span style="color:#75715e"></span>          <span style="color:#75715e">// when C &lt; (M &gt;&gt; K)
+</span><span style="color:#75715e"></span>          <span style="color:#66d9ef">const</span> <span style="color:#66d9ef">uint32_t</span> c <span style="color:#f92672">=</span> m.right().Value();
+          <span style="color:#66d9ef">const</span> <span style="color:#66d9ef">uint32_t</span> k <span style="color:#f92672">=</span> mleft.right().Value() <span style="color:#f92672">&amp;</span> <span style="color:#ae81ff">0x1F</span>;
+          <span style="color:#66d9ef">if</span> (c <span style="color:#f92672">&lt;</span> <span style="color:#66d9ef">static_cast</span><span style="color:#f92672">&lt;</span><span style="color:#66d9ef">uint32_t</span><span style="color:#f92672">&gt;</span>(kMaxInt <span style="color:#f92672">&gt;&gt;</span> k)) {
+            node<span style="color:#f92672">-&gt;</span>ReplaceInput(<span style="color:#ae81ff">0</span>, mleft.left().node());
+            node<span style="color:#f92672">-&gt;</span>ReplaceInput(<span style="color:#ae81ff">1</span>, Uint32Constant(c <span style="color:#f92672">&lt;&lt;</span> k));
+            <span style="color:#66d9ef">return</span> <span style="color:#a6e22e">Changed</span>(node);
+          }
+          <span style="color:#75715e">// TODO(turbofan): else the comparison is always true.
+</span><span style="color:#75715e"></span>        }
+      }
+      <span style="color:#66d9ef">break</span>;
+    }
 </code></pre></div>
     </div>
     <div class="post-footer">
