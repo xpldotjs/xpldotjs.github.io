@@ -6,7 +6,17 @@
     <description>Recent content in Posts on Xploiter</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Thu, 26 Aug 2021 00:58:14 +0545</lastBuildDate><atom:link href="https://xpldotjs.github.io/posts/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Sat, 28 Aug 2021 15:37:18 +0545</lastBuildDate><atom:link href="https://xpldotjs.github.io/posts/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Turbofan Wrong Type on String indexOf and lastIndexOf</title>
+      <link>https://xpldotjs.github.io/posts/turbofan-wrong-type-on-string-indexof-and-lastindexof/</link>
+      <pubDate>Sat, 28 Aug 2021 15:37:18 +0545</pubDate>
+      
+      <guid>https://xpldotjs.github.io/posts/turbofan-wrong-type-on-string-indexof-and-lastindexof/</guid>
+      <description>Overview In this section we&amp;rsquo;ll be focusing on checkbounds and try to bypass it. The bug used in this section is String.indexOf | String.lastIndexOf bug where the typer computed incorrect type for kIndexOf and kLastIndexOf. This post heavily rely of doar-e blog.
+Setup fetch v8 git reset --hard 8cd4009c5b7072ad224f19a9e668ec0ed7430599 gclient sync tools/dev/gm.py x64.debug ninja -C out/x64.debug d8 CheckBounds </description>
+    </item>
+    
     <item>
       <title>V8 Challange DuplicateAdditionReducer</title>
       <link>https://xpldotjs.github.io/posts/v8-challange-duplicateadditionreducer/</link>
