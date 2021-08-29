@@ -73,7 +73,7 @@ Setup fetch v8 git reset --hard 8cd4009c5b7072ad224f19a9e668ec0ed7430599 gclient
   <title>clock</title>
   <circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline>
 </svg>
-          8 min read
+          9 min read
         </div>
       </div>
     </header>
@@ -355,12 +355,47 @@ ninja -C out/x64.debug d8
       }
       <span style="color:#66d9ef">break</span>;
     }
+    <span style="color:#75715e">// [...]
+</span><span style="color:#75715e"></span>  }
+  
+  Type original_type <span style="color:#f92672">=</span> NodeProperties<span style="color:#f92672">::</span>GetType(node);
+  Type <span style="color:#66d9ef">restricted</span> <span style="color:#f92672">=</span> Type<span style="color:#f92672">::</span>Intersect(new_type, original_type, zone());
+  <span style="color:#66d9ef">if</span> (<span style="color:#f92672">!</span>original_type.Is(<span style="color:#66d9ef">restricted</span>)) {
+    NodeProperties<span style="color:#f92672">::</span>SetType(node, <span style="color:#66d9ef">restricted</span>); <span style="color:#75715e">// if singleton_true: restricted = new_type
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">return</span> <span style="color:#a6e22e">Changed</span>(node);
+  }
+  <span style="color:#66d9ef">return</span> <span style="color:#a6e22e">NoChange</span>();
+  }
 </code></pre></div><p>In our case,</p>
 <ol>
 <li>left_type.Max() = 0</li>
 <li>right_type.Max() = 2</li>
 </ol>
-<p>This time the <code>new_type</code> is set to <code>singleton_true()</code> because the condition <code>left_type.Max() &lt; right_type.Min()</code> is true which means <code>index  is less than the length of array</code>.</p>
+<p>This time the <code>new_type</code> is set to <code>singleton_true()</code> because the condition <code>left_type.Max() &lt; right_type.Min()</code> is true which means <code>index  is less than the length of array</code>. Also the <code>new_type</code> is <code>HeapConstant</code>. Then the type of node is set to <code>HeapConstant</code>. The important point here to note is only the <code>type</code> of the node is changed.</p>
+<p>Also in <code>LoadEliminationPhase</code>, <code>ConstantFoldingReducer::Reduce</code> function is called. There the type of the <code>NumberLessThan</code> is retrieved. Then it begins to check the type of the node <code>NumberConstant</code>, in our case it&rsquo;s <code>HeapConstant</code>. In our case the condition <code>IsHeapConstant()</code> met, so the node <code>NumberLessThan</code> node will be replaced by the node <code>HeapConstant</code>.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-C++" data-lang="C++">Reduction ConstantFoldingReducer<span style="color:#f92672">::</span>Reduce(Node<span style="color:#f92672">*</span> node) {
+    <span style="color:#75715e">// [...]
+</span><span style="color:#75715e"></span>    Type upper <span style="color:#f92672">=</span> NodeProperties<span style="color:#f92672">::</span>GetType(node);
+    <span style="color:#66d9ef">if</span> (<span style="color:#f92672">!</span>upper.IsNone()) {
+      Node<span style="color:#f92672">*</span> replacement <span style="color:#f92672">=</span> <span style="color:#66d9ef">nullptr</span>;
+      <span style="color:#66d9ef">if</span> (upper.IsHeapConstant()) {
+        replacement <span style="color:#f92672">=</span> jsgraph()<span style="color:#f92672">-&gt;</span>Constant(upper.AsHeapConstant()<span style="color:#f92672">-&gt;</span>Ref());
+      } 
+      <span style="color:#75715e">// [...]
+</span><span style="color:#75715e"></span>      <span style="color:#66d9ef">if</span> (replacement) {
+        <span style="color:#75715e">// Make sure the node has a type.
+</span><span style="color:#75715e"></span>        <span style="color:#66d9ef">if</span> (<span style="color:#f92672">!</span>NodeProperties<span style="color:#f92672">::</span>IsTyped(replacement)) {
+          NodeProperties<span style="color:#f92672">::</span>SetType(replacement, upper);
+        } <span style="color:#75715e">// replacement = `HeapConstant`
+</span><span style="color:#75715e"></span>        ReplaceWithValue(node, replacement); <span style="color:#75715e">// replace the `NumberLessThan` by `HeapConstant`
+</span><span style="color:#75715e"></span>        <span style="color:#66d9ef">return</span> <span style="color:#a6e22e">Changed</span>(replacement);
+      }
+    }
+  }
+  <span style="color:#66d9ef">return</span> <span style="color:#a6e22e">NoChange</span>();
+}
+</code></pre></div><p>OUTPUT:</p>
+<p><img src="/posts/static/StringIndexOf/007-output.png" alt="output"></p>
 
     </div>
     <div class="post-footer">
