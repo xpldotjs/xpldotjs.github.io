@@ -46,6 +46,13 @@ Setup fetch v8 git reset --hard 8cd4009c5b7072ad224f19a9e668ec0ed7430599 gclient
 </svg>
           </a>
         
+          <a href="https://www.facebook.com/john.sherchan.9/" target="_blank" rel="noreferrer noopener">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-facebook">
+  <title>My Facebook</title>
+  <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"></path>
+</svg>
+          </a>
+        
       </div>
     </header>
     <main class="app-container">
@@ -247,9 +254,9 @@ ninja -C out/x64.debug d8
 <p>With our sample code we failed to set <code>new_type</code> to <code>singleton_true()</code> because the condition doesn&rsquo;t met.</p>
 <ol>
 <li><code>left_type.Max()</code> = 4</li>
-<li><code>right_type.Min()</code> = 3
-In this case <code>left_type.Max() &lt; right_type.Min()</code> is always false.</li>
+<li><code>right_type.Min()</code> = 3</li>
 </ol>
+<p>In this case <code>left_type.Max() &lt; right_type.Min()</code> is always false.</p>
 <p><img src="/posts/static/StringIndexOf/004-type-left-right.png" alt="left-right-type"></p>
 <p>If we further dig into it.</p>
 <p><img src="/posts/static/StringIndexOf/004-type-left-right-in-depth.png" alt="left-right-type"></p>
@@ -314,7 +321,7 @@ In this case <code>left_type.Max() &lt; right_type.Min()</code> is always false.
 </code></pre></div><p>The <code>SpeculativeNumberMultiply</code> is also reduced into <code>NumberMultiply</code> during the typed optimization. In <code>NumberMultiply</code> function:</p>
 <ol>
 <li>lhs = Range(0,0) // Output of NumberShiftRight, in actual the range is Range(0,1)</li>
-<li>rhs = Range(4,4) // NumberConstant</li>
+<li>rhs = Range(4,4) // NumberConstant 4</li>
 </ol>
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-C++" data-lang="C++">Type OperationTyper<span style="color:#f92672">::</span>NumberMultiply(Type lhs, Type rhs) {
   <span style="color:#75715e">// [...]
@@ -329,6 +336,31 @@ In this case <code>left_type.Max() &lt; right_type.Min()</code> is always false.
   <span style="color:#66d9ef">return</span> type;
 }
 </code></pre></div><p>In our case both <code>lhs</code> and <code>rhs</code> are type <code>kInteger</code> then it calls <code>MultiplyRanger</code> function which returns the range <code>Range(0,0)</code> but in actual the range should be <code>Range(0,4)</code>.</p>
+<p>Now, In <code>LoadElimination</code> phase <code>TypeNarrowingReducer::Reduce</code> is called, where the it is switched to case <code>IrOpcode::kNumberLessThan</code>.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-C++" data-lang="C++">Reduction TypeNarrowingReducer<span style="color:#f92672">::</span>Reduce(Node<span style="color:#f92672">*</span> node) {
+  <span style="color:#75715e">// [...]
+</span><span style="color:#75715e"></span>  <span style="color:#66d9ef">switch</span> (node<span style="color:#f92672">-&gt;</span>opcode()) {
+    <span style="color:#66d9ef">case</span> IrOpcode<span style="color:#f92672">::</span>kNumberLessThan: {
+      <span style="color:#75715e">// TODO(turbofan) Reuse the logic from typer.cc (by integrating relational
+</span><span style="color:#75715e"></span>      <span style="color:#75715e">// comparisons with the operation typer).
+</span><span style="color:#75715e"></span>      Type left_type <span style="color:#f92672">=</span> NodeProperties<span style="color:#f92672">::</span>GetType(node<span style="color:#f92672">-&gt;</span>InputAt(<span style="color:#ae81ff">0</span>));
+      Type right_type <span style="color:#f92672">=</span> NodeProperties<span style="color:#f92672">::</span>GetType(node<span style="color:#f92672">-&gt;</span>InputAt(<span style="color:#ae81ff">1</span>));
+      <span style="color:#66d9ef">if</span> (left_type.Is(Type<span style="color:#f92672">::</span>PlainNumber()) <span style="color:#f92672">&amp;&amp;</span>
+          right_type.Is(Type<span style="color:#f92672">::</span>PlainNumber())) {
+        <span style="color:#66d9ef">if</span> (left_type.Max() <span style="color:#f92672">&lt;</span> right_type.Min()) {
+          new_type <span style="color:#f92672">=</span> op_typer_.singleton_true();
+        } <span style="color:#66d9ef">else</span> <span style="color:#a6e22e">if</span> (left_type.Min() <span style="color:#f92672">&gt;=</span> right_type.Max()) {
+          new_type <span style="color:#f92672">=</span> op_typer_.singleton_false();
+        }
+      }
+      <span style="color:#66d9ef">break</span>;
+    }
+</code></pre></div><p>In our case,</p>
+<ol>
+<li>left_type.Max() = 0</li>
+<li>right_type.Max() = 2</li>
+</ol>
+<p>This time the <code>new_type</code> is set to <code>singleton_true()</code> because the condition <code>left_type.Max() &lt; right_type.Min()</code> is true which means <code>index  is less than the length of array</code>.</p>
 
     </div>
     <div class="post-footer">
