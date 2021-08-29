@@ -66,7 +66,7 @@ Setup fetch v8 git reset --hard 8cd4009c5b7072ad224f19a9e668ec0ed7430599 gclient
   <title>clock</title>
   <circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline>
 </svg>
-          6 min read
+          8 min read
         </div>
       </div>
     </header>
@@ -281,7 +281,54 @@ In this case <code>left_type.Max() &lt; right_type.Min()</code> is always false.
 <span style="color:#a6e22e">console</span>.<span style="color:#a6e22e">log</span>(<span style="color:#a6e22e">trigger</span>());
 <span style="color:#f92672">%</span><span style="color:#a6e22e">OptimizeFunctionOnNextCall</span>(<span style="color:#a6e22e">trigger</span>);
 <span style="color:#a6e22e">console</span>.<span style="color:#a6e22e">log</span>(<span style="color:#a6e22e">trigger</span>());
-</code></pre></div><p>In the POC, we created a string with length <code>1073741799</code> [1].</p>
+</code></pre></div><p>In the POC, we created a string with length <code>1073741799</code> [ 1 ]. Then we called the <code>lastIndexOf</code> function which gives the result <code>1073741799</code> and we know this because the fact is that it&rsquo;s the length of the string that we&rsquo;ve created. But, because of the <code>Incorrect</code> typing Turbofan generates the rage of <code>Range(-1, 1073741798)</code>. Then we added <code>+25</code> in the <code>idx</code> variable. It is because 1073741798. So the question is why adding <code>25</code>? Because the right shift <code>30</code> is <code>2 power 30 = 1073741824</code> and when we add <code>idx</code> variable with <code>25</code> it becomes <code>1073741799 + 25 = 1073741824</code> in actual, but in <code>typer</code> it&rsquo;s <code>1073741798 + 25 = 1073741823</code>. So if we right shift the <code>idx</code> variable with <code>30</code> after adding <code>25</code></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">1. Typer: idx <span style="color:#f92672">=</span> 1073741823; idx &gt;&gt; 30 <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>   
+    this is equivalent to <span style="color:#ae81ff">1073741823</span> / 1073741824 <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>
+2. Actual: idx <span style="color:#f92672">=</span> 1073741824; idx &gt;&gt; 30 <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span> 
+    this is equivalent to <span style="color:#ae81ff">1073741824</span> / 1073741824 <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>
+</code></pre></div><p>Eventuall, in <code>NumberShiftRight</code> the range is calculated as <code>Range(0,0)</code> in the NumberShiftRight. However the actual range should be <code>Range(0,1)</code>. Then it is passed into the <code>SpeculativeNumberMultiply</code> node as <code>input node 0</code> in <code>Typerphase</code>.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-C++" data-lang="C++">Type OperationTyper<span style="color:#f92672">::</span>NumberShiftRight(Type lhs, Type rhs) {
+  DCHECK(lhs.Is(Type<span style="color:#f92672">::</span>Number()));
+  DCHECK(rhs.Is(Type<span style="color:#f92672">::</span>Number()));
+
+  lhs <span style="color:#f92672">=</span> NumberToInt32(lhs);
+  rhs <span style="color:#f92672">=</span> NumberToUint32(rhs);
+
+  <span style="color:#66d9ef">if</span> (lhs.IsNone() <span style="color:#f92672">||</span> rhs.IsNone()) <span style="color:#66d9ef">return</span> Type<span style="color:#f92672">::</span>None();
+
+  <span style="color:#66d9ef">int32_t</span> min_lhs <span style="color:#f92672">=</span> lhs.Min();
+  <span style="color:#66d9ef">int32_t</span> max_lhs <span style="color:#f92672">=</span> lhs.Max();
+  <span style="color:#66d9ef">uint32_t</span> min_rhs <span style="color:#f92672">=</span> rhs.Min();
+  <span style="color:#66d9ef">uint32_t</span> max_rhs <span style="color:#f92672">=</span> rhs.Max();
+  <span style="color:#66d9ef">if</span> (max_rhs <span style="color:#f92672">&gt;</span> <span style="color:#ae81ff">31</span>) {
+    <span style="color:#75715e">// rhs can be larger than the bitmask
+</span><span style="color:#75715e"></span>    max_rhs <span style="color:#f92672">=</span> <span style="color:#ae81ff">31</span>;
+    min_rhs <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
+  }
+  <span style="color:#66d9ef">double</span> min <span style="color:#f92672">=</span> std<span style="color:#f92672">::</span>min(min_lhs <span style="color:#f92672">&gt;&gt;</span> min_rhs, min_lhs <span style="color:#f92672">&gt;&gt;</span> max_rhs);
+  <span style="color:#66d9ef">double</span> max <span style="color:#f92672">=</span> std<span style="color:#f92672">::</span>max(max_lhs <span style="color:#f92672">&gt;&gt;</span> min_rhs, max_lhs <span style="color:#f92672">&gt;&gt;</span> max_rhs);
+
+  <span style="color:#66d9ef">if</span> (max <span style="color:#f92672">==</span> kMaxInt <span style="color:#f92672">&amp;&amp;</span> min <span style="color:#f92672">==</span> kMinInt) <span style="color:#66d9ef">return</span> Type<span style="color:#f92672">::</span>Signed32();
+  <span style="color:#66d9ef">return</span> Type<span style="color:#f92672">::</span>Range(min, max, zone());
+}
+</code></pre></div><p>The <code>SpeculativeNumberMultiply</code> is also reduced into <code>NumberMultiply</code> during the typed optimization. In <code>NumberMultiply</code> function:</p>
+<ol>
+<li>lhs = Range(0,0) // Output of NumberShiftRight, in actual the range is Range(0,1)</li>
+<li>rhs = Range(4,4) // NumberConstant</li>
+</ol>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-C++" data-lang="C++">Type OperationTyper<span style="color:#f92672">::</span>NumberMultiply(Type lhs, Type rhs) {
+  <span style="color:#75715e">// [...]
+</span><span style="color:#75715e"></span>  <span style="color:#75715e">// Compute the effective type, utilizing range information if possible.
+</span><span style="color:#75715e"></span>  Type type <span style="color:#f92672">=</span> (lhs.Is(cache_<span style="color:#f92672">-&gt;</span>kInteger) <span style="color:#f92672">&amp;&amp;</span> rhs.Is(cache_<span style="color:#f92672">-&gt;</span>kInteger))
+                  <span style="color:#f92672">?</span> MultiplyRanger(lhs.Min(), lhs.Max(), rhs.Min(), rhs.Max())
+                  <span style="color:#f92672">:</span> Type<span style="color:#f92672">::</span>OrderedNumber();
+
+  <span style="color:#75715e">// Take into account the -0 and NaN information computed earlier.
+</span><span style="color:#75715e"></span>  <span style="color:#66d9ef">if</span> (maybe_minuszero) type <span style="color:#f92672">=</span> Type<span style="color:#f92672">::</span>Union(type, Type<span style="color:#f92672">::</span>MinusZero(), zone());
+  <span style="color:#66d9ef">if</span> (maybe_nan) type <span style="color:#f92672">=</span> Type<span style="color:#f92672">::</span>Union(type, Type<span style="color:#f92672">::</span>NaN(), zone());
+  <span style="color:#66d9ef">return</span> type;
+}
+</code></pre></div><p>In our case both <code>lhs</code> and <code>rhs</code> are type <code>kInteger</code> then it calls <code>MultiplyRanger</code> function which returns the range <code>Range(0,0)</code> but in actual the range should be <code>Range(0,4)</code>.</p>
 
     </div>
     <div class="post-footer">
