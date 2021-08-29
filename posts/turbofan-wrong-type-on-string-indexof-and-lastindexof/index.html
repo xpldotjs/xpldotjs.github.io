@@ -66,7 +66,7 @@ Setup fetch v8 git reset --hard 8cd4009c5b7072ad224f19a9e668ec0ed7430599 gclient
   <title>clock</title>
   <circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline>
 </svg>
-          4 min read
+          5 min read
         </div>
       </div>
     </header>
@@ -222,9 +222,9 @@ ninja -C out/x64.debug d8
       Type right_type <span style="color:#f92672">=</span> NodeProperties<span style="color:#f92672">::</span>GetType(node<span style="color:#f92672">-&gt;</span>InputAt(<span style="color:#ae81ff">1</span>));
       <span style="color:#66d9ef">if</span> (left_type.Is(Type<span style="color:#f92672">::</span>PlainNumber()) <span style="color:#f92672">&amp;&amp;</span>
           right_type.Is(Type<span style="color:#f92672">::</span>PlainNumber())) {
-        <span style="color:#66d9ef">if</span> (left_type.Max() <span style="color:#f92672">&lt;</span> right_type.Min()) {
-          new_type <span style="color:#f92672">=</span> op_typer_.singleton_true();
-        } <span style="color:#66d9ef">else</span> <span style="color:#a6e22e">if</span> (left_type.Min() <span style="color:#f92672">&gt;=</span> right_type.Max()) {
+<span style="display:block;width:100%;background-color:#3c3d38">        <span style="color:#66d9ef">if</span> (left_type.Max() <span style="color:#f92672">&lt;</span> right_type.Min()) { 
+</span><span style="display:block;width:100%;background-color:#3c3d38">          new_type <span style="color:#f92672">=</span> op_typer_.singleton_true();    <span style="color:#75715e">// [1]
+</span></span><span style="color:#75715e"></span>        } <span style="color:#66d9ef">else</span> <span style="color:#a6e22e">if</span> (left_type.Min() <span style="color:#f92672">&gt;=</span> right_type.Max()) {
           new_type <span style="color:#f92672">=</span> op_typer_.singleton_false();
         }
       }
@@ -235,13 +235,26 @@ ninja -C out/x64.debug d8
   Type original_type <span style="color:#f92672">=</span> NodeProperties<span style="color:#f92672">::</span>GetType(node);
   Type <span style="color:#66d9ef">restricted</span> <span style="color:#f92672">=</span> Type<span style="color:#f92672">::</span>Intersect(new_type, original_type, zone());
   <span style="color:#66d9ef">if</span> (<span style="color:#f92672">!</span>original_type.Is(<span style="color:#66d9ef">restricted</span>)) {
-    NodeProperties<span style="color:#f92672">::</span>SetType(node, <span style="color:#66d9ef">restricted</span>); <span style="color:#75715e">// if singleton_true
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">return</span> <span style="color:#a6e22e">Changed</span>(node);
-  }
+<span style="display:block;width:100%;background-color:#3c3d38">    NodeProperties<span style="color:#f92672">::</span>SetType(node, <span style="color:#66d9ef">restricted</span>); <span style="color:#75715e">// [2] if singleton_true
+</span></span><span style="display:block;width:100%;background-color:#3c3d38"><span style="color:#75715e"></span>    <span style="color:#66d9ef">return</span> <span style="color:#a6e22e">Changed</span>(node);
+</span>  }
   <span style="color:#66d9ef">return</span> <span style="color:#a6e22e">NoChange</span>();
   }
 }
-</code></pre></div><h3 id="writing-poc">Writing POC</h3>
+</code></pre></div><p>If the <code>left_type.Max()</code> is always less than <code>right_type.Min()</code>, <code>new_type</code> will be set to <code>singleton_true()</code> and the type of the node gets changed to restricted i.e, in this case <code>new_type</code>.</p>
+<p><code>TypeNarrowingReducer::Reduce(Node* node)</code> is being called from the <code>LoadEliminationPhase</code> where <code>kNumberLessThan</code> will be switched.</p>
+<p><img src="/posts/static/StringIndexOf/003-load-elimination.png" alt="loadelimination"></p>
+<p>With our sample code we failed to set <code>new_type</code> to <code>singleton_true()</code> because the condition doesn&rsquo;t met.</p>
+<ol>
+<li><code>left_type.Max()</code> = 4</li>
+<li><code>right_type.Min()</code> = 3
+In this case <code>left_type.Max() &lt; right_type.Min()</code> is always false.</li>
+</ol>
+<p><img src="/posts/static/StringIndexOf/004-type-left-right.png" alt="left-right-type"></p>
+<p>If we further dig into it.</p>
+<p><img src="/posts/static/StringIndexOf/004-type-left-right-in-depth.png" alt="left-right-type"></p>
+<p>As we can see in the above image that the <code>left_type.Max()</code> is the value from <code>CheckBounds</code> node and the <code>right_type.Min()</code> is the length of our array. Also, we can confirm that the <code>left_type.Max()</code> is the index. So lets modify the code in such way that the <code>left_type.Max()</code> always remain less than <code>right_type.Min()</code> which we&rsquo;ll do with the help of <code>typer</code> bug <code>lastIndexOf</code>.</p>
+<h3 id="writing-poc">Writing POC</h3>
 <p>Writing the POC has always been the hardest part for me even if i understand the bug. Because sometime it&rsquo;s quite tricky to trigger the bug. Let&rsquo;s see what we&rsquo;ve got till now</p>
 <ol>
 <li>In simplified lowering <code>checkbounds</code> node doesn&rsquo;t get eliminated instead <code>kAbortOnOutOfBounds</code> mode is set and lowered to the <code>CheckUint32Bounds</code>.</li>
