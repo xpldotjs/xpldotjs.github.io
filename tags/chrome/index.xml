@@ -33,7 +33,7 @@ IR An intermediate representation is a representation of a program “between”
       <pubDate>Fri, 20 Aug 2021 22:38:57 +0545</pubDate>
       
       <guid>https://xpldotjs.github.io/posts/babychrome-linectf/</guid>
-      <description>Patch diff --git a/src/compiler/simplified-lowering.cc b/src/compiler/simplified-lowering.cc index da7d0b0fde..f91eea1693 100644 --- a/src/compiler/simplified-lowering.cc +++ b/src/compiler/simplified-lowering.cc @@ -186,12 +186,12 @@ bool CanOverflowSigned32(const Operator* op, Type left, Type right, // We assume the inputs are checked Signed32 (or known statically to be  // Signed32). Technically, the inputs could also be minus zero, which we treat  // as 0 for the purpose of this function. - if (left.Maybe(Type::MinusZero())) { - left = Type::Union(left, type_cache-&amp;gt;kSingletonZero, type_zone); - } - if (right.</description>
+      <description>Setup fetch v8 git reset --hard c126700cbc1f7391b8b717f7c54b4f9537355db7 Patch diff --git a/src/compiler/simplified-lowering.cc b/src/compiler/simplified-lowering.cc index da7d0b0fde..f91eea1693 100644 --- a/src/compiler/simplified-lowering.cc +++ b/src/compiler/simplified-lowering.cc @@ -186,12 +186,12 @@ bool CanOverflowSigned32(const Operator* op, Type left, Type right, // We assume the inputs are checked Signed32 (or known statically to be  // Signed32). Technically, the inputs could also be minus zero, which we treat  // as 0 for the purpose of this function. - if (left.</description>
     </item>
     
     <item>
