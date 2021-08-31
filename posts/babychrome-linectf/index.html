@@ -69,7 +69,7 @@
   <title>clock</title>
   <circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline>
 </svg>
-          2 min read
+          5 min read
         </div>
         <div>
           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tag">
@@ -141,36 +141,149 @@ index fe68106a55.<span style="color:#ae81ff">.90f</span><span style="color:#ae81
 </span><span style="color:#75715e"></span><span style="color:#f92672">+</span><span style="color:#75715e">//  if (right.Maybe(Type::MinusZero())) {
 </span><span style="color:#75715e"></span><span style="color:#f92672">+</span><span style="color:#75715e">//    right = Type::Union(right, type_cache-&gt;kSingletonZero, type_zone);
 </span><span style="color:#75715e"></span><span style="color:#f92672">+</span><span style="color:#75715e">//  }
-</span></code></pre></div><h3 id="patch-analysis">Patch Analysis</h3>
-<h3 id="poc">POC</h3>
+</span></code></pre></div><h3 id="poc-and-analysis">POC and Analysis</h3>
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-JS" data-lang="JS"><span style="color:#75715e">// incomplete
 </span><span style="color:#75715e"></span><span style="color:#66d9ef">function</span> <span style="color:#a6e22e">trigger</span>(<span style="color:#a6e22e">a</span>) {
-  <span style="color:#66d9ef">let</span> <span style="color:#a6e22e">minusZero</span> <span style="color:#f92672">=</span> <span style="color:#f92672">-</span><span style="color:#ae81ff">0</span>;
-  <span style="color:#66d9ef">let</span> <span style="color:#a6e22e">p</span> <span style="color:#f92672">=</span> <span style="color:#f92672">-</span><span style="color:#ae81ff">0x80000000</span>;
-
-  <span style="color:#66d9ef">if</span> (<span style="color:#a6e22e">a</span>) {
-    <span style="color:#a6e22e">minusZero</span> <span style="color:#f92672">=</span> <span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>;
-    <span style="color:#a6e22e">p</span> <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>;
-  }
-
-  <span style="color:#a6e22e">p</span> <span style="color:#f92672">=</span> <span style="color:#a6e22e">minusZero</span> <span style="color:#f92672">-</span> <span style="color:#a6e22e">p</span>;
-  <span style="color:#a6e22e">p</span> <span style="color:#f92672">=</span> <span style="color:#a6e22e">p</span> <span style="color:#f92672">+</span> <span style="color:#ae81ff">0</span>;
-  <span style="color:#a6e22e">p</span> <span style="color:#f92672">=</span> Math.<span style="color:#a6e22e">max</span>(<span style="color:#f92672">-</span><span style="color:#ae81ff">4</span>, <span style="color:#a6e22e">p</span>);
-  <span style="color:#a6e22e">p</span> <span style="color:#f92672">=</span> <span style="color:#f92672">-</span><span style="color:#a6e22e">p</span>;
-  <span style="color:#a6e22e">p</span> <span style="color:#f92672">+=</span> <span style="color:#ae81ff">1</span>;
-  <span style="color:#a6e22e">p</span> <span style="color:#f92672">=</span> Math.<span style="color:#a6e22e">max</span>(<span style="color:#a6e22e">p</span>, <span style="color:#ae81ff">1</span>);
-  <span style="color:#a6e22e">p</span> <span style="color:#f92672">+=</span> <span style="color:#ae81ff">1</span>;
-  <span style="color:#a6e22e">p</span> <span style="color:#f92672">&gt;&gt;=</span> <span style="color:#ae81ff">1</span>;
-  <span style="color:#a6e22e">p</span> <span style="color:#f92672">-=</span> <span style="color:#ae81ff">2</span>;
-
-  <span style="color:#66d9ef">let</span> <span style="color:#a6e22e">arr</span> <span style="color:#f92672">=</span> Array(<span style="color:#a6e22e">p</span>);
-  <span style="color:#66d9ef">let</span> <span style="color:#a6e22e">arr_two</span> <span style="color:#f92672">=</span> [<span style="color:#ae81ff">1.1</span>, <span style="color:#ae81ff">2.2</span>, <span style="color:#ae81ff">3.3</span>];
-  <span style="color:#a6e22e">arr</span>.<span style="color:#a6e22e">pop</span>();
-
-  <span style="color:#66d9ef">return</span> [<span style="color:#a6e22e">arr</span>.<span style="color:#a6e22e">length</span>, <span style="color:#a6e22e">arr</span>, <span style="color:#a6e22e">arr_two</span>];
+	<span style="color:#66d9ef">let</span> <span style="color:#a6e22e">x</span> <span style="color:#f92672">=</span> <span style="color:#a6e22e">a</span> <span style="color:#f92672">?</span> <span style="color:#ae81ff">2</span> <span style="color:#f92672">:</span> <span style="color:#f92672">-</span><span style="color:#ae81ff">0x80000000</span>;
+	<span style="color:#66d9ef">let</span> <span style="color:#a6e22e">y</span> <span style="color:#f92672">=</span> <span style="color:#a6e22e">a</span> <span style="color:#f92672">?</span> <span style="color:#f92672">-</span><span style="color:#ae81ff">1</span> <span style="color:#f92672">:</span> <span style="color:#f92672">-</span><span style="color:#ae81ff">0</span>;
+	<span style="color:#66d9ef">let</span> <span style="color:#a6e22e">sub</span> <span style="color:#f92672">=</span> <span style="color:#a6e22e">y</span> <span style="color:#f92672">-</span> <span style="color:#a6e22e">x</span>;
+	<span style="color:#66d9ef">let</span> <span style="color:#a6e22e">ret</span> <span style="color:#f92672">=</span> <span style="color:#a6e22e">sub</span> <span style="color:#f92672">==</span> <span style="color:#f92672">-</span><span style="color:#ae81ff">0x80000000</span>;
+	<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">ret</span>;
 }
 
-</code></pre></div>
+<span style="color:#a6e22e">trigger</span>(<span style="color:#66d9ef">true</span>);
+<span style="color:#66d9ef">for</span> (<span style="color:#66d9ef">var</span> <span style="color:#a6e22e">i</span> <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>; <span style="color:#a6e22e">i</span> <span style="color:#f92672">&lt;</span> <span style="color:#ae81ff">10000</span>; <span style="color:#a6e22e">i</span><span style="color:#f92672">++</span>) {
+	<span style="color:#a6e22e">trigger</span>(<span style="color:#66d9ef">true</span>);
+}
+<span style="color:#a6e22e">console</span>.<span style="color:#a6e22e">log</span>(<span style="color:#a6e22e">trigger</span>(<span style="color:#66d9ef">false</span>)); <span style="color:#75715e">//returns true
+</span></code></pre></div><p>In the poc, if the <code>a</code> is <code>true</code>:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-JS" data-lang="JS"><span style="color:#a6e22e">x</span> <span style="color:#f92672">=</span> <span style="color:#ae81ff">2</span>
+<span style="color:#a6e22e">y</span> <span style="color:#f92672">=</span> <span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>
+<span style="color:#a6e22e">sub</span> <span style="color:#f92672">=</span> <span style="color:#a6e22e">y</span> <span style="color:#f92672">-</span> <span style="color:#a6e22e">x</span> <span style="color:#f92672">=</span> <span style="color:#f92672">-</span><span style="color:#ae81ff">1</span> <span style="color:#f92672">-</span> <span style="color:#ae81ff">2</span> <span style="color:#f92672">=</span> <span style="color:#f92672">-</span><span style="color:#ae81ff">3</span>
+<span style="color:#a6e22e">ret</span> <span style="color:#f92672">=</span> <span style="color:#a6e22e">sub</span> <span style="color:#f92672">==</span> <span style="color:#f92672">-</span><span style="color:#ae81ff">0x80000000</span> <span style="color:#f92672">=</span> <span style="color:#f92672">-</span><span style="color:#ae81ff">3</span> <span style="color:#f92672">==</span> <span style="color:#f92672">-</span><span style="color:#ae81ff">0x80000000</span>;
+<span style="color:#a6e22e">ret</span> <span style="color:#f92672">=</span> <span style="color:#66d9ef">false</span>
+</code></pre></div><p>If the <code>a</code> is <code>false</code>:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-JS" data-lang="JS"><span style="color:#a6e22e">x</span> <span style="color:#f92672">=</span> <span style="color:#f92672">-</span><span style="color:#ae81ff">0x80000000</span>
+<span style="color:#a6e22e">y</span> <span style="color:#f92672">=</span> <span style="color:#f92672">-</span><span style="color:#ae81ff">0</span>
+<span style="color:#a6e22e">sub</span> <span style="color:#f92672">=</span> <span style="color:#a6e22e">y</span> <span style="color:#f92672">-</span> <span style="color:#a6e22e">x</span> <span style="color:#f92672">=</span> <span style="color:#f92672">-</span><span style="color:#ae81ff">0</span> <span style="color:#f92672">-</span> (<span style="color:#f92672">-</span><span style="color:#ae81ff">0x80000000</span>) <span style="color:#f92672">=</span> <span style="color:#ae81ff">2147483648</span> (<span style="color:#ae81ff">0x80000000</span> <span style="color:#66d9ef">in</span> <span style="color:#a6e22e">hex</span>)
+<span style="color:#a6e22e">ret</span> <span style="color:#f92672">=</span> <span style="color:#a6e22e">sub</span> <span style="color:#f92672">==</span> <span style="color:#f92672">-</span><span style="color:#ae81ff">0x80000000</span> <span style="color:#f92672">=</span> <span style="color:#ae81ff">0x80000000</span> <span style="color:#f92672">==</span> <span style="color:#f92672">-</span><span style="color:#ae81ff">0x80000000</span>;
+<span style="color:#a6e22e">ret</span> <span style="color:#f92672">=</span> <span style="color:#66d9ef">false</span>
+</code></pre></div><p>As we can see above, in both cases the <code>trigger</code> function should return false. However, after the optimization the <code>trigger(false)</code> returns true which is incorrect. This is because the <code>-0</code> is not checked in the <code>CanOverflowSigned32</code></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-C++" data-lang="C++"><span style="color:#75715e">// src/compiler/simplified-lowering.cc
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">bool</span> <span style="color:#a6e22e">CanOverflowSigned32</span>(<span style="color:#66d9ef">const</span> Operator<span style="color:#f92672">*</span> op, Type left, Type right,
+                         TypeCache <span style="color:#66d9ef">const</span><span style="color:#f92672">*</span> type_cache, Zone<span style="color:#f92672">*</span> type_zone) {
+  <span style="color:#75715e">// We assume the inputs are checked Signed32 (or known statically to be
+</span><span style="color:#75715e"></span>  <span style="color:#75715e">// Signed32). Technically, the inputs could also be minus zero, which we treat
+</span><span style="color:#75715e"></span>  <span style="color:#75715e">// as 0 for the purpose of this function.
+</span><span style="color:#75715e">//  if (left.Maybe(Type::MinusZero())) {
+</span><span style="color:#75715e">//    left = Type::Union(left, type_cache-&gt;kSingletonZero, type_zone);
+</span><span style="color:#75715e">//  }
+</span><span style="color:#75715e">//  if (right.Maybe(Type::MinusZero())) {
+</span><span style="color:#75715e">//    right = Type::Union(right, type_cache-&gt;kSingletonZero, type_zone);
+</span><span style="color:#75715e">//  }
+</span><span style="color:#75715e"></span>  left <span style="color:#f92672">=</span> Type<span style="color:#f92672">::</span>Intersect(left, Type<span style="color:#f92672">::</span>Signed32(), type_zone);
+  right <span style="color:#f92672">=</span> Type<span style="color:#f92672">::</span>Intersect(right, Type<span style="color:#f92672">::</span>Signed32(), type_zone);
+  <span style="color:#66d9ef">if</span> (left.IsNone() <span style="color:#f92672">||</span> right.IsNone()) <span style="color:#66d9ef">return</span> false;
+  <span style="color:#66d9ef">switch</span> (op<span style="color:#f92672">-&gt;</span>opcode()) {
+    <span style="color:#66d9ef">case</span> IrOpcode<span style="color:#f92672">::</span>kSpeculativeSafeIntegerAdd:
+      <span style="color:#66d9ef">return</span> (left.Max() <span style="color:#f92672">+</span> right.Max() <span style="color:#f92672">&gt;</span> kMaxInt) <span style="color:#f92672">||</span>
+             (left.Min() <span style="color:#f92672">+</span> right.Min() <span style="color:#f92672">&lt;</span> kMinInt);
+
+    <span style="color:#66d9ef">case</span> IrOpcode<span style="color:#f92672">::</span>kSpeculativeSafeIntegerSubtract:
+      <span style="color:#66d9ef">return</span> (left.Max() <span style="color:#f92672">-</span> right.Min() <span style="color:#f92672">&gt;</span> kMaxInt) <span style="color:#f92672">||</span>
+             (left.Min() <span style="color:#f92672">-</span> right.Max() <span style="color:#f92672">&lt;</span> kMinInt);
+
+    <span style="color:#66d9ef">default</span><span style="color:#f92672">:</span>
+      UNREACHABLE();
+  }
+  <span style="color:#66d9ef">return</span> true;
+}
+</code></pre></div><p>Before Intersect:</p>
+<p><img src="/posts/static/linectfbabychrome/001-before-optimization.png" alt="BeforeIntersect"></p>
+<p>After Intersect:</p>
+<p><img src="/posts/static/linectfbabychrome/002-after-optimization.png" alt="AfterIntersect"></p>
+<p>After the intersect we can see that the range is <code>Range(-1,-1)</code> and <code>-0</code> is lost but, in actual it should be <code>Range(-1, 0)</code> which might give incorrect information to other optimization phases. After the intersect, it&rsquo;ll check either the <code>opcode</code> is <code>kSpeculativeSafeIntegerAdd</code> or <code>kSpeculativeSafeIntegerSubtract</code>. This is to check if there&rsquo;s an overflow or not.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-C++" data-lang="C++"><span style="color:#66d9ef">bool</span> <span style="color:#a6e22e">CanOverflowSigned32</span>(<span style="color:#66d9ef">const</span> Operator<span style="color:#f92672">*</span> op, Type left, Type right,
+                         TypeCache <span style="color:#66d9ef">const</span><span style="color:#f92672">*</span> type_cache, Zone<span style="color:#f92672">*</span> type_zone) {
+  <span style="color:#75715e">// We assume the inputs are checked Signed32 (or known statically to be
+</span><span style="color:#75715e"></span>  <span style="color:#75715e">// Signed32). Technically, the inputs could also be minus zero, which we treat
+</span><span style="color:#75715e"></span>  <span style="color:#75715e">// as 0 for the purpose of this function.
+</span><span style="color:#75715e">//  if (left.Maybe(Type::MinusZero())) {
+</span><span style="color:#75715e">//    left = Type::Union(left, type_cache-&gt;kSingletonZero, type_zone);
+</span><span style="color:#75715e">//  }
+</span><span style="color:#75715e">//  if (right.Maybe(Type::MinusZero())) {
+</span><span style="color:#75715e">//    right = Type::Union(right, type_cache-&gt;kSingletonZero, type_zone);
+</span><span style="color:#75715e">//  }
+</span><span style="color:#75715e"></span>  left <span style="color:#f92672">=</span> Type<span style="color:#f92672">::</span>Intersect(left, Type<span style="color:#f92672">::</span>Signed32(), type_zone);
+  right <span style="color:#f92672">=</span> Type<span style="color:#f92672">::</span>Intersect(right, Type<span style="color:#f92672">::</span>Signed32(), type_zone);
+   <span style="color:#75715e">// [...]
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">case</span> IrOpcode<span style="color:#f92672">::</span>kSpeculativeSafeIntegerSubtract:  <span style="color:#75715e">// [1]
+</span><span style="color:#75715e"></span>      <span style="color:#66d9ef">return</span> (left.Max() <span style="color:#f92672">-</span> right.Min() <span style="color:#f92672">&gt;</span> kMaxInt) <span style="color:#f92672">||</span>
+             (left.Min() <span style="color:#f92672">-</span> right.Max() <span style="color:#f92672">&lt;</span> kMinInt);
+   <span style="color:#75715e">// [...]
+</span><span style="color:#75715e"></span>}
+</code></pre></div><p>In our case, it&rsquo;s a <code>kSpeculativeSafeIntegerSubtract</code> there it&rsquo;ll check if the resultant number is greater than <code>kMaxInt</code> and less than <code>kMinInt</code>. If either of one returns <code>true</code> compiler will know it&rsquo;s an overflow.</p>
+<p>In actual, if the <code>-0</code> was not lost durint <code>intersect</code>:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-JS" data-lang="JS"><span style="color:#a6e22e">left_min</span> <span style="color:#f92672">=</span> <span style="color:#a6e22e">left</span>.<span style="color:#a6e22e">Min</span>() <span style="color:#f92672">=</span> <span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>
+<span style="color:#a6e22e">left_max</span> <span style="color:#f92672">=</span> <span style="color:#a6e22e">left</span>.<span style="color:#a6e22e">Max</span>() <span style="color:#f92672">=</span> <span style="color:#f92672">-</span><span style="color:#ae81ff">0</span>
+<span style="color:#a6e22e">right_min</span> <span style="color:#f92672">=</span> <span style="color:#a6e22e">right</span>.<span style="color:#a6e22e">Min</span>() <span style="color:#f92672">=</span> <span style="color:#f92672">-</span><span style="color:#ae81ff">2147483648</span>
+<span style="color:#a6e22e">right_max</span> <span style="color:#f92672">=</span> <span style="color:#a6e22e">right</span>.<span style="color:#a6e22e">Max</span>() <span style="color:#f92672">=</span> <span style="color:#ae81ff">2</span>
+<span style="color:#a6e22e">kMaxInt</span> <span style="color:#f92672">=</span> <span style="color:#ae81ff">2147483647</span>
+<span style="color:#a6e22e">kMinInt</span> <span style="color:#f92672">=</span> <span style="color:#f92672">-</span><span style="color:#ae81ff">2147483648</span>
+
+<span style="color:#75715e">// checking if greater than kMaxInt
+</span><span style="color:#75715e"></span>(<span style="color:#a6e22e">left_max</span> <span style="color:#f92672">-</span> <span style="color:#a6e22e">right_min</span>) <span style="color:#f92672">&gt;</span> <span style="color:#a6e22e">kMaxInt</span>
+(<span style="color:#f92672">-</span><span style="color:#ae81ff">0</span> <span style="color:#f92672">-</span> (<span style="color:#f92672">-</span><span style="color:#ae81ff">2147483648</span>)) <span style="color:#f92672">&gt;</span> <span style="color:#ae81ff">2147483647</span>
+<span style="color:#ae81ff">2147483648</span> <span style="color:#f92672">&gt;</span> <span style="color:#ae81ff">2147483647</span>
+<span style="color:#66d9ef">true</span>   <span style="color:#75715e">// overflow
+</span><span style="color:#75715e"></span>
+<span style="color:#75715e">// checking if less than kMinInt
+</span><span style="color:#75715e"></span>(<span style="color:#a6e22e">left_min</span> <span style="color:#f92672">-</span> <span style="color:#a6e22e">right_max</span>) <span style="color:#f92672">&lt;</span> <span style="color:#a6e22e">kMinInt</span>
+(<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span> <span style="color:#f92672">-</span> <span style="color:#ae81ff">2</span>) <span style="color:#f92672">&lt;</span> <span style="color:#f92672">-</span><span style="color:#ae81ff">2147483648</span>
+<span style="color:#f92672">-</span><span style="color:#ae81ff">3</span> <span style="color:#f92672">&lt;</span> <span style="color:#f92672">-</span><span style="color:#ae81ff">2147483648</span>
+<span style="color:#66d9ef">false</span>
+
+</code></pre></div><p>However, because of the patch the <code>-0</code> is not checked and during the <code>intersect</code>, instead of <code>-0</code> it returns <code>-1</code>.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-JS" data-lang="JS"><span style="color:#a6e22e">left_min</span> <span style="color:#f92672">=</span> <span style="color:#a6e22e">left</span>.<span style="color:#a6e22e">Min</span>() <span style="color:#f92672">=</span> <span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>
+<span style="color:#a6e22e">left_max</span> <span style="color:#f92672">=</span> <span style="color:#a6e22e">left</span>.<span style="color:#a6e22e">Max</span>() <span style="color:#f92672">=</span> <span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>
+<span style="color:#a6e22e">right_min</span> <span style="color:#f92672">=</span> <span style="color:#a6e22e">right</span>.<span style="color:#a6e22e">Min</span>() <span style="color:#f92672">=</span> <span style="color:#f92672">-</span><span style="color:#ae81ff">2147483648</span>
+<span style="color:#a6e22e">right_max</span> <span style="color:#f92672">=</span> <span style="color:#a6e22e">right</span>.<span style="color:#a6e22e">Max</span>() <span style="color:#f92672">=</span> <span style="color:#ae81ff">2</span>
+<span style="color:#a6e22e">kMaxInt</span> <span style="color:#f92672">=</span> <span style="color:#ae81ff">2147483647</span>
+<span style="color:#a6e22e">kMinInt</span> <span style="color:#f92672">=</span> <span style="color:#f92672">-</span><span style="color:#ae81ff">2147483648</span>
+
+<span style="color:#75715e">// checking if greater than kMaxInt
+</span><span style="color:#75715e"></span>(<span style="color:#a6e22e">left_max</span> <span style="color:#f92672">-</span> <span style="color:#a6e22e">right_min</span>) <span style="color:#f92672">&gt;</span> <span style="color:#a6e22e">kMaxInt</span>
+(<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span> <span style="color:#f92672">-</span> (<span style="color:#f92672">-</span><span style="color:#ae81ff">2147483648</span>)) <span style="color:#f92672">&gt;</span> <span style="color:#ae81ff">2147483647</span>
+<span style="color:#ae81ff">2147483647</span> <span style="color:#f92672">&gt;</span> <span style="color:#ae81ff">2147483647</span>
+<span style="color:#66d9ef">false</span>   <span style="color:#75715e">// overflow
+</span><span style="color:#75715e"></span>
+<span style="color:#75715e">// checking if less than kMinInt
+</span><span style="color:#75715e"></span>(<span style="color:#a6e22e">left_min</span> <span style="color:#f92672">-</span> <span style="color:#a6e22e">right_max</span>) <span style="color:#f92672">&lt;</span> <span style="color:#a6e22e">kMinInt</span>
+(<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span> <span style="color:#f92672">-</span> <span style="color:#ae81ff">2</span>) <span style="color:#f92672">&lt;</span> <span style="color:#f92672">-</span><span style="color:#ae81ff">2147483648</span>
+<span style="color:#f92672">-</span><span style="color:#ae81ff">3</span> <span style="color:#f92672">&lt;</span> <span style="color:#f92672">-</span><span style="color:#ae81ff">2147483648</span>
+<span style="color:#66d9ef">false</span>
+
+</code></pre></div><p>As a result, at <code>VisitSpeculativeIntegerAdditiveOp</code> function because the <code>CanOverflowSigned32</code> returned false,  the <code>op</code> of the node is changed to <code>Int32Op</code> which is <code>IntSub</code> instead of <code>Int32OverflowOp</code>.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-C++" data-lang="C++">  <span style="color:#66d9ef">template</span> <span style="color:#f92672">&lt;</span>Phase T<span style="color:#f92672">&gt;</span>
+  <span style="color:#66d9ef">void</span> VisitSpeculativeIntegerAdditiveOp(Node<span style="color:#f92672">*</span> node, Truncation truncation,
+                                         SimplifiedLowering<span style="color:#f92672">*</span> lowering) {
+    <span style="color:#75715e">// [...]
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">if</span> (lower<span style="color:#f92672">&lt;</span>T<span style="color:#f92672">&gt;</span>()) {
+      <span style="color:#66d9ef">if</span> (truncation.IsUsedAsWord32() <span style="color:#f92672">||</span>
+          <span style="color:#f92672">!</span>CanOverflowSigned32(node<span style="color:#f92672">-&gt;</span>op(), left_feedback_type,
+                               right_feedback_type, type_cache_,
+                               graph_zone())) {
+        ChangeToPureOp(node, Int32Op(node)); <span style="color:#75715e">// [1]
+</span><span style="color:#75715e"></span>
+      } <span style="color:#66d9ef">else</span> {
+        ChangeToInt32OverflowOp(node);
+      }
+    }
+    <span style="color:#66d9ef">return</span>;
+  }
+</code></pre></div><p>But i&rsquo;m not satisfied with the analysis or POC that i&rsquo;ve done or written because for this i had to rely on this <a href="https://www.joyk.com/dig/detail/1621587673133306">blog</a>. So i want to further dig into details before writing exploit.</p>
+<h3 id="exploit-writing">Exploit writing</h3>
+
     </div>
     <div class="post-footer">
       
