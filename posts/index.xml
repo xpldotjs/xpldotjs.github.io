@@ -6,7 +6,16 @@
     <description>Recent content in Posts on Xploiter</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Sat, 28 Aug 2021 15:37:18 +0545</lastBuildDate><atom:link href="https://xpldotjs.github.io/posts/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Sat, 04 Sep 2021 19:22:16 +0545</lastBuildDate><atom:link href="https://xpldotjs.github.io/posts/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>The False Promise Plaidctf</title>
+      <link>https://xpldotjs.github.io/posts/the-false-promise-plaidctf/</link>
+      <pubDate>Sat, 04 Sep 2021 19:22:16 +0545</pubDate>
+      
+      <guid>https://xpldotjs.github.io/posts/the-false-promise-plaidctf/</guid>
+      <description></description>
+    </item>
+    
     <item>
       <title>Turbofan Wrong Type on String indexOf and lastIndexOf</title>
       <link>https://xpldotjs.github.io/posts/turbofan-wrong-type-on-string-indexof-and-lastindexof/</link>
