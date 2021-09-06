@@ -160,8 +160,7 @@ ninja -C out.gn/x64.debug
 </span><span style="color:#a6e22e">+}  // namespace compiler
 </span><span style="color:#a6e22e">+}  // namespace internal
 </span><span style="color:#a6e22e">+}  // namespace v8
-</span><span style="color:#a6e22e"></span>
-</code></pre></div><p>Inside the <code>DuplicateAdditionReducer::Reduce</code> function we can see there&rsquo;s a switch statement, if the <code>opcode</code> of the node is <code>kNumberAdd</code> it&rsquo;ll call the <code>ReduceAddition</code> function. At the <code>ReduceAddition</code> function there&rsquo;s a 4 possible code path.</p>
+</span></code></pre></div><p>Inside the <code>DuplicateAdditionReducer::Reduce</code> function we can see there&rsquo;s a switch statement, if the <code>opcode</code> of the node is <code>kNumberAdd</code> it&rsquo;ll call the <code>ReduceAddition</code> function. At the <code>ReduceAddition</code> function there&rsquo;s a 4 possible code path.</p>
 <ol>
 <li>It checks if the node at the left input edge of the current node is not equal to current node opcode i.e., <code>kNumberAdd</code>. If it is not equal no changes will be made. else</li>
 <li>It&rsquo;ll check if the right input node of the current node not equal to opcode <code>kNumberConstant</code>. If it is not equal no changes will be made. else it&rsquo;ll go to the next if statement.</li>

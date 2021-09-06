@@ -13,7 +13,7 @@
       <pubDate>Sat, 04 Sep 2021 19:22:16 +0545</pubDate>
       
       <guid>https://xpldotjs.github.io/posts/the-false-promise-plaidctf/</guid>
-      <description></description>
+      <description>Setup mkdir v8 fetch v8 cd v8 ./build/install-build-deps.sh git reset --hard 7e4fdca2949570363b68db08adbbf17ee375d15c gclient sync patch -p1 &amp;lt; ../../promise.diff tools/dev/gm.py x64.debug Patch --- src/builtins/promise-jobs.tq +++ src/builtins/promise-jobs.tq @@ -23,10 +23,8 @@ PromiseResolveThenableJob(implicit context: Context)(  // debugger is active, to make sure we expose spec compliant behavior. const nativeContext = LoadNativeContext(context); const promiseThen = *NativeContextSlot(ContextSlot::PROMISE_THEN_INDEX); - const thenableMap = thenable.map; - if (TaggedEqual(then, promiseThen) &amp;amp;&amp;amp; IsJSPromiseMap(thenableMap) &amp;amp;&amp;amp; - !IsPromiseHookEnabledOrDebugIsActiveOrHasAsyncEventDelegate() &amp;amp;&amp;amp; - IsPromiseSpeciesLookupChainIntact(nativeContext, thenableMap)) { + if (TaggedEqual(then, promiseThen) &amp;amp;&amp;amp; + !</description>
     </item>
     
     <item>
