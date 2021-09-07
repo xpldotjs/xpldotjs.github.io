@@ -69,7 +69,7 @@
   <title>clock</title>
   <circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline>
 </svg>
-          1 min read
+          2 min read
         </div>
       </div>
     </header>
@@ -99,6 +99,47 @@ tools/dev/gm.py x64.debug
 </span><span style="color:#a6e22e"></span>     // We know that the {thenable} is a JSPromise, which doesn&#39;t require
      // any special treatment and that {then} corresponds to the initial
      // Promise.prototype.then method. So instead of allocating a temporary
+</code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-C++" data-lang="C++"><span style="color:#960050;background-color:#1e0010">@</span><span style="color:#66d9ef">export</span>
+transitioning macro PerformPromiseThenImpl(implicit context: Context)(
+    promise: JSPromise, onFulfilled: Callable<span style="color:#f92672">|</span>Undefined,
+    onRejected: Callable<span style="color:#f92672">|</span>Undefined,
+    resultPromiseOrCapability: JSPromise<span style="color:#f92672">|</span>PromiseCapability<span style="color:#f92672">|</span>Undefined)<span style="color:#f92672">:</span> <span style="color:#66d9ef">void</span> {
+  <span style="color:#66d9ef">if</span> (promise.Status() <span style="color:#f92672">==</span> PromiseState<span style="color:#f92672">::</span>kPending) {
+    <span style="color:#75715e">// The {promise} is still in &#34;Pending&#34; state, so we just record a new
+</span><span style="color:#75715e"></span>    <span style="color:#75715e">// PromiseReaction holding both the onFulfilled and onRejected callbacks.
+</span><span style="color:#75715e"></span>    <span style="color:#75715e">// Once the {promise} is resolved we decide on the concrete handler to
+</span><span style="color:#75715e"></span>    <span style="color:#75715e">// push onto the microtask queue.
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">const</span> handlerContext <span style="color:#f92672">=</span> ExtractHandlerContext(onFulfilled, onRejected);
+    <span style="color:#66d9ef">const</span> promiseReactions <span style="color:#f92672">=</span>
+        UnsafeCast<span style="color:#f92672">&lt;</span>(Zero <span style="color:#f92672">|</span> PromiseReaction)<span style="color:#f92672">&gt;</span>(promise.reactions_or_result);
+    <span style="color:#66d9ef">const</span> reaction <span style="color:#f92672">=</span> NewPromiseReaction(
+        handlerContext, promiseReactions, resultPromiseOrCapability,
+        onFulfilled, onRejected);
+    promise.reactions_or_result <span style="color:#f92672">=</span> reaction;
+  } <span style="color:#66d9ef">else</span> {
+    <span style="color:#66d9ef">const</span> reactionsOrResult <span style="color:#f92672">=</span> promise.reactions_or_result;
+    let microtask: PromiseReactionJobTask;
+    let handlerContext: Context;
+    <span style="color:#66d9ef">if</span> (promise.Status() <span style="color:#f92672">==</span> PromiseState<span style="color:#f92672">::</span>kFulfilled) {
+      handlerContext <span style="color:#f92672">=</span> ExtractHandlerContext(onFulfilled, onRejected);
+      microtask <span style="color:#f92672">=</span> NewPromiseFulfillReactionJobTask(
+          handlerContext, reactionsOrResult, onFulfilled,
+          resultPromiseOrCapability);
+    } <span style="color:#66d9ef">else</span>
+      deferred {
+        assert(promise.Status() <span style="color:#f92672">==</span> PromiseState<span style="color:#f92672">::</span>kRejected);
+        handlerContext <span style="color:#f92672">=</span> ExtractHandlerContext(onRejected, onFulfilled);
+        microtask <span style="color:#f92672">=</span> NewPromiseRejectReactionJobTask(
+            handlerContext, reactionsOrResult, onRejected,
+            resultPromiseOrCapability);
+        <span style="color:#66d9ef">if</span> (<span style="color:#f92672">!</span>promise.HasHandler()) {
+          runtime<span style="color:#f92672">::</span>PromiseRevokeReject(promise);
+        }
+      }
+    EnqueueMicrotask(handlerContext, microtask);
+  }
+  promise.SetHasHandler();
+}
 </code></pre></div>
     </div>
     <div class="post-footer">
