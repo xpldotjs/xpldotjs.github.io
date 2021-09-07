@@ -148,6 +148,57 @@ transitioning macro PerformPromiseThenImpl(implicit context: Context)(
   PerformPromiseThenImpl(promise, onFulfilled, onRejected, resultPromise);
   <span style="color:#66d9ef">return</span> resultPromise;
 }
+</code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-C++" data-lang="C++"><span style="color:#75715e">// https://tc39.es/ecma262/#sec-promise-executor
+</span><span style="color:#75715e"></span>transitioning javascript builtin
+<span style="color:#a6e22e">PromiseConstructor</span>(
+    js<span style="color:#f92672">-</span>implicit context: NativeContext, receiver: JSAny,
+    newTarget: JSAny)(executor: JSAny)<span style="color:#f92672">:</span> JSAny {
+  <span style="color:#75715e">// 1. If NewTarget is undefined, throw a TypeError exception.
+</span><span style="color:#75715e"></span>  <span style="color:#66d9ef">if</span> (newTarget <span style="color:#f92672">==</span> Undefined) {
+    ThrowTypeError(MessageTemplate<span style="color:#f92672">::</span>kNotAPromise, newTarget);
+  }
+
+  <span style="color:#75715e">// 2. If IsCallable(executor) is false, throw a TypeError exception.
+</span><span style="color:#75715e"></span>  <span style="color:#66d9ef">if</span> (<span style="color:#f92672">!</span>Is<span style="color:#f92672">&lt;</span>Callable<span style="color:#f92672">&gt;</span>(executor)) {
+    ThrowTypeError(MessageTemplate<span style="color:#f92672">::</span>kResolverNotAFunction, executor);
+  }
+
+  <span style="color:#66d9ef">const</span> promiseFun <span style="color:#f92672">=</span> <span style="color:#f92672">*</span>NativeContextSlot(ContextSlot<span style="color:#f92672">::</span>PROMISE_FUNCTION_INDEX);
+
+  <span style="color:#75715e">// Silently fail if the stack looks fishy.
+</span><span style="color:#75715e"></span>  <span style="color:#66d9ef">if</span> (HasAccessCheckFailed(context, promiseFun, executor)) {
+    IncrementUseCounter(
+        context, SmiConstant(kPromiseConstructorReturnedUndefined));
+    <span style="color:#66d9ef">return</span> Undefined;
+  }
+
+  let result: JSPromise;
+  <span style="color:#66d9ef">if</span> (promiseFun <span style="color:#f92672">==</span> newTarget) {
+    result <span style="color:#f92672">=</span> NewJSPromise();
+  } <span style="color:#66d9ef">else</span> {
+    result <span style="color:#f92672">=</span> UnsafeCast<span style="color:#f92672">&lt;</span>JSPromise<span style="color:#f92672">&gt;</span>(
+        FastNewObject(context, promiseFun, UnsafeCast<span style="color:#f92672">&lt;</span>JSReceiver<span style="color:#f92672">&gt;</span>(newTarget)));
+    PromiseInit(result);
+    <span style="color:#66d9ef">if</span> (IsPromiseHookEnabledOrHasAsyncEventDelegate()) {
+      runtime<span style="color:#f92672">::</span>PromiseHookInit(result, Undefined);
+    }
+  }
+
+  <span style="color:#66d9ef">const</span> isDebugActive <span style="color:#f92672">=</span> IsDebugActive();
+  <span style="color:#66d9ef">if</span> (isDebugActive) runtime<span style="color:#f92672">::</span>DebugPushPromise(result);
+
+  <span style="color:#66d9ef">const</span> funcs <span style="color:#f92672">=</span> CreatePromiseResolvingFunctions(result, True, context);
+  <span style="color:#66d9ef">const</span> resolve <span style="color:#f92672">=</span> funcs.resolve;
+  <span style="color:#66d9ef">const</span> reject <span style="color:#f92672">=</span> funcs.reject;
+  <span style="color:#66d9ef">try</span> {
+    Call(context, UnsafeCast<span style="color:#f92672">&lt;</span>Callable<span style="color:#f92672">&gt;</span>(executor), Undefined, resolve, reject);
+  } <span style="color:#66d9ef">catch</span> (e) {
+    Call(context, reject, Undefined, e);
+  }
+
+  <span style="color:#66d9ef">if</span> (isDebugActive) runtime<span style="color:#f92672">::</span>DebugPopPromise();
+  <span style="color:#66d9ef">return</span> result;
+}
 </code></pre></div>
     </div>
     <div class="post-footer">
