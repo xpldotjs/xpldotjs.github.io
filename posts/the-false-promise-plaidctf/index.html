@@ -69,7 +69,7 @@
   <title>clock</title>
   <circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline>
 </svg>
-          4 min read
+          5 min read
         </div>
       </div>
     </header>
@@ -154,7 +154,16 @@ transitioning macro PerformPromiseThenImpl(implicit context: Context)(
 
 </code></pre></div></li>
 </ol>
-<p>Lets inspect the arguments passed to the <code>PromiseResolveThenableJob</code> inside gdb:</p>
+<p>Lets inspect the <code>arguments</code> passed to the <code>PromiseResolveThenableJob</code> inside gdb:</p>
+<p><img src="/posts/static/the-false-promise/arguments.png" alt="Arguments"></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-Plain" data-lang="Plain">1. promiseToResolve = $rax = JSPromise
+2. thenable = $rbx = JSArray (our fake crafted JSPromise)
+3. then = $rcx = Function (Promise.prototype.then) which is also written in the source code.
+</code></pre></div><p>Now in the <code>if checks</code>, <code>TaggedEqual</code> function is called which is to be bypassed to reach to the <code>UnsafeCast</code> or <code>PerformPromiseThen</code> function. In <code>TaggedEqual</code> 2 <code>arguments</code> were passed. <code>then</code> which is <code>JSAny</code> or <code>Function (Promise.prototype.then)</code> and <code>promiseThen</code> which is still unknown. Lets find out what the <code>promiseThen</code> is. As we can see the <code>promiseThen</code> is set with the following code:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-C++" data-lang="C++"><span style="color:#66d9ef">const</span> promiseThen <span style="color:#f92672">=</span> <span style="color:#f92672">*</span>NativeContextSlot(ContextSlot<span style="color:#f92672">::</span>PROMISE_THEN_INDEX)
+</code></pre></div><p>With the simple guess we can say that, whatever the value in the slot i.e., <code>NativeContextSlot</code> with index <code>ContextSlot::PROMISE_THEN_INDEX</code> is the <code>promiseThen</code>.</p>
+<p><img src="/posts/static/the-false-promise/cmp_then.png" alt="cmp_then"></p>
+<p><img src="/posts/static/the-false-promise/cmp_promiseThen.png" alt="cmp_promiseThen"></p>
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-C++" data-lang="C++"><span style="color:#75715e">// src/builtins/promise-abstract-operations.tq
 </span><span style="color:#75715e"></span><span style="color:#960050;background-color:#1e0010">@</span><span style="color:#66d9ef">export</span>
 transitioning macro PerformPromiseThenImpl(implicit context: Context)(
