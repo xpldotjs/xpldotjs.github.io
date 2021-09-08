@@ -69,7 +69,7 @@
   <title>clock</title>
   <circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline>
 </svg>
-          3 min read
+          4 min read
         </div>
       </div>
     </header>
@@ -100,7 +100,7 @@ tools/dev/gm.py x64.debug
      // any special treatment and that {then} corresponds to the initial
      // Promise.prototype.then method. So instead of allocating a temporary
 </code></pre></div><h3 id="poc-and-analysis">POC and Analysis</h3>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-js" data-lang="js"></code></pre></div><p>In the following code we can see the <code>if</code> statement which calls the <code>TaggedEqual</code> function to check if <code>then</code> and <code>promiseThen</code> are equal. If we bypass this check, <code>PerformPromiseThen</code> function is called where <code>UnsafeCast</code> is performed on <code>thenable</code>.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-js" data-lang="js"></code></pre></div><p>In the following code we can see the <code>if</code> statement which calls the <code>TaggedEqual</code> function to check if <code>then</code> and <code>promiseThen</code> are equal. If we bypass this check, <code>PerformPromiseThen</code> function is called where <code>UnsafeCast</code> is performed on <code>thenable</code>. <code>thenable</code> is our <code>JSArray object</code> as seen in the POC, which will be crafted as fake <code>JSPromise object</code>.</p>
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-C++" data-lang="C++"><span style="color:#75715e">// src/builtins/promise-jobs.tq
 </span><span style="color:#75715e">// https://tc39.es/ecma262/#sec-promiseresolvethenablejob
 </span><span style="color:#75715e"></span>transitioning builtin
@@ -133,7 +133,29 @@ tools/dev/gm.py x64.debug
     <span style="color:#75715e">// [...]
 </span><span style="color:#75715e"></span>  }
 }
-</code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-C++" data-lang="C++"><span style="color:#75715e">// src/builtins/promise-abstract-operations.tq
+</code></pre></div><p><code>PromiseResolveThenableJob</code> function takes 3 arguments <code>promiseToResolve, thenable, and then</code>. The question is what are these 3 arguments.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plain" data-lang="plain">Here, the calling convention is: $rax, $rbx, $rcx, $rdx
+</code></pre></div><p>Let&rsquo;s put the breakpoint and run the <code>d8 shell</code> in gbd. I found 2 ways to set the breakpoints on the builtin functions:</p>
+<ol>
+<li>
+<p>Setting breakpoint from the gdb, for instance:</p>
+<p><code>br Builtins_PromiseResolveThenableJob</code></p>
+</li>
+<li>
+<p>Putting breakpoint directly on the source code by adding <code>DebugBreak()</code> function on .tq file:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-C++" data-lang="C++"><span style="color:#75715e">// src/builtins/promise-abstract-operations.tq
+</span><span style="color:#75715e"></span><span style="color:#960050;background-color:#1e0010">@</span><span style="color:#66d9ef">export</span>
+transitioning macro PerformPromiseThenImpl(implicit context: Context)(
+    promise: JSPromise, onFulfilled: Callable<span style="color:#f92672">|</span>Undefined,
+    onRejected: Callable<span style="color:#f92672">|</span>Undefined,
+    resultPromiseOrCapability: JSPromise<span style="color:#f92672">|</span>PromiseCapability<span style="color:#f92672">|</span>Undefined)<span style="color:#f92672">:</span> <span style="color:#66d9ef">void</span> {
+<span style="display:block;width:100%;background-color:#3c3d38">    DebugBreak();
+</span>    <span style="color:#66d9ef">if</span> (promise.Status() <span style="color:#f92672">==</span> PromiseState<span style="color:#f92672">::</span>kPending) {
+
+</code></pre></div></li>
+</ol>
+<p>Lets inspect the arguments passed to the <code>PromiseResolveThenableJob</code> inside gdb:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-C++" data-lang="C++"><span style="color:#75715e">// src/builtins/promise-abstract-operations.tq
 </span><span style="color:#75715e"></span><span style="color:#960050;background-color:#1e0010">@</span><span style="color:#66d9ef">export</span>
 transitioning macro PerformPromiseThenImpl(implicit context: Context)(
     promise: JSPromise, onFulfilled: Callable<span style="color:#f92672">|</span>Undefined,
