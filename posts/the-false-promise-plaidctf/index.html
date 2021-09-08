@@ -13,10 +13,10 @@
     
     <meta name="twitter:card" content="summary"/>
 <meta name="twitter:title" content="The False Promise Plaidctf"/>
-<meta name="twitter:description" content="Setup mkdir v8 fetch v8 cd v8 ./build/install-build-deps.sh git reset --hard 7e4fdca2949570363b68db08adbbf17ee375d15c gclient sync patch -p1 &lt; ../../promise.diff tools/dev/gm.py x64.debug Patch --- src/builtins/promise-jobs.tq &#43;&#43;&#43; src/builtins/promise-jobs.tq @@ -23,10 &#43;23,8 @@ PromiseResolveThenableJob(implicit context: Context)(  // debugger is active, to make sure we expose spec compliant behavior. const nativeContext = LoadNativeContext(context); const promiseThen = *NativeContextSlot(ContextSlot::PROMISE_THEN_INDEX); - const thenableMap = thenable.map; - if (TaggedEqual(then, promiseThen) &amp;&amp; IsJSPromiseMap(thenableMap) &amp;&amp; - !IsPromiseHookEnabledOrDebugIsActiveOrHasAsyncEventDelegate() &amp;&amp; - IsPromiseSpeciesLookupChainIntact(nativeContext, thenableMap)) { &#43; if (TaggedEqual(then, promiseThen) &amp;&amp; &#43; !"/>
+<meta name="twitter:description" content="Setup mkdir v8 fetch v8 cd v8 ./build/install-build-deps.sh git reset --hard 7e4fdca2949570363b68db08adbbf17ee375d15c gclient sync patch -p1 &lt; ../../promise.diff tools/dev/gm.py x64.debug Patch and Analysis --- src/builtins/promise-jobs.tq &#43;&#43;&#43; src/builtins/promise-jobs.tq @@ -23,10 &#43;23,8 @@ PromiseResolveThenableJob(implicit context: Context)(  // debugger is active, to make sure we expose spec compliant behavior. const nativeContext = LoadNativeContext(context); const promiseThen = *NativeContextSlot(ContextSlot::PROMISE_THEN_INDEX); - const thenableMap = thenable.map; - if (TaggedEqual(then, promiseThen) &amp;&amp; IsJSPromiseMap(thenableMap) &amp;&amp; - !IsPromiseHookEnabledOrDebugIsActiveOrHasAsyncEventDelegate() &amp;&amp; - IsPromiseSpeciesLookupChainIntact(nativeContext, thenableMap)) { &#43; if (TaggedEqual(then, promiseThen) &amp;&amp; &#43; !"/>
 
     <meta property="og:title" content="The False Promise Plaidctf" />
-<meta property="og:description" content="Setup mkdir v8 fetch v8 cd v8 ./build/install-build-deps.sh git reset --hard 7e4fdca2949570363b68db08adbbf17ee375d15c gclient sync patch -p1 &lt; ../../promise.diff tools/dev/gm.py x64.debug Patch --- src/builtins/promise-jobs.tq &#43;&#43;&#43; src/builtins/promise-jobs.tq @@ -23,10 &#43;23,8 @@ PromiseResolveThenableJob(implicit context: Context)(  // debugger is active, to make sure we expose spec compliant behavior. const nativeContext = LoadNativeContext(context); const promiseThen = *NativeContextSlot(ContextSlot::PROMISE_THEN_INDEX); - const thenableMap = thenable.map; - if (TaggedEqual(then, promiseThen) &amp;&amp; IsJSPromiseMap(thenableMap) &amp;&amp; - !IsPromiseHookEnabledOrDebugIsActiveOrHasAsyncEventDelegate() &amp;&amp; - IsPromiseSpeciesLookupChainIntact(nativeContext, thenableMap)) { &#43; if (TaggedEqual(then, promiseThen) &amp;&amp; &#43; !" />
+<meta property="og:description" content="Setup mkdir v8 fetch v8 cd v8 ./build/install-build-deps.sh git reset --hard 7e4fdca2949570363b68db08adbbf17ee375d15c gclient sync patch -p1 &lt; ../../promise.diff tools/dev/gm.py x64.debug Patch and Analysis --- src/builtins/promise-jobs.tq &#43;&#43;&#43; src/builtins/promise-jobs.tq @@ -23,10 &#43;23,8 @@ PromiseResolveThenableJob(implicit context: Context)(  // debugger is active, to make sure we expose spec compliant behavior. const nativeContext = LoadNativeContext(context); const promiseThen = *NativeContextSlot(ContextSlot::PROMISE_THEN_INDEX); - const thenableMap = thenable.map; - if (TaggedEqual(then, promiseThen) &amp;&amp; IsJSPromiseMap(thenableMap) &amp;&amp; - !IsPromiseHookEnabledOrDebugIsActiveOrHasAsyncEventDelegate() &amp;&amp; - IsPromiseSpeciesLookupChainIntact(nativeContext, thenableMap)) { &#43; if (TaggedEqual(then, promiseThen) &amp;&amp; &#43; !" />
 <meta property="og:type" content="article" />
 <meta property="og:url" content="https://xpldotjs.github.io/posts/the-false-promise-plaidctf/" /><meta property="article:section" content="posts" />
 <meta property="article:published_time" content="2021-09-04T19:22:16+05:45" />
@@ -69,7 +69,7 @@
   <title>clock</title>
   <circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline>
 </svg>
-          2 min read
+          4 min read
         </div>
       </div>
     </header>
@@ -83,7 +83,7 @@ git reset --hard 7e4fdca2949570363b68db08adbbf17ee375d15c
 gclient sync
 patch -p1 &lt; ../../promise.diff
 tools/dev/gm.py x64.debug
-</code></pre></div><h3 id="patch">Patch</h3>
+</code></pre></div><h3 id="patch-and-analysis">Patch and Analysis</h3>
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-diff" data-lang="diff"><span style="color:#f92672">--- src/builtins/promise-jobs.tq
 </span><span style="color:#f92672"></span><span style="color:#a6e22e">+++ src/builtins/promise-jobs.tq
 </span><span style="color:#a6e22e"></span><span style="color:#75715e">@@ -23,10 +23,8 @@ PromiseResolveThenableJob(implicit context: Context)(
@@ -99,11 +99,75 @@ tools/dev/gm.py x64.debug
 </span><span style="color:#a6e22e"></span>     // We know that the {thenable} is a JSPromise, which doesn&#39;t require
      // any special treatment and that {then} corresponds to the initial
      // Promise.prototype.then method. So instead of allocating a temporary
-</code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-C++" data-lang="C++"><span style="color:#960050;background-color:#1e0010">@</span><span style="color:#66d9ef">export</span>
+</code></pre></div><p>Full code for above patch:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-C++" data-lang="C++"><span style="color:#75715e">// src/builtins/promise-jobs.tq
+</span><span style="color:#75715e">// https://tc39.es/ecma262/#sec-promiseresolvethenablejob
+</span><span style="color:#75715e"></span>transitioning builtin
+<span style="color:#a6e22e">PromiseResolveThenableJob</span>(implicit context: Context)(
+    promiseToResolve: JSPromise, thenable: JSReceiver, then: JSAny)<span style="color:#f92672">:</span> JSAny {
+  <span style="color:#75715e">// We can use a simple optimization here if we know that {then} is the
+</span><span style="color:#75715e"></span>  <span style="color:#75715e">// initial Promise.prototype.then method, and {thenable} is a JSPromise
+</span><span style="color:#75715e"></span>  <span style="color:#75715e">// whose
+</span><span style="color:#75715e"></span>  <span style="color:#75715e">// @@species lookup chain is intact: We can connect {thenable} and
+</span><span style="color:#75715e"></span>  <span style="color:#75715e">// {promise_to_resolve} directly in that case and avoid the allocation of a
+</span><span style="color:#75715e"></span>  <span style="color:#75715e">// temporary JSPromise and the closures plus context.
+</span><span style="color:#75715e"></span>  <span style="color:#75715e">//
+</span><span style="color:#75715e"></span>  <span style="color:#75715e">// We take the generic (slow-)path if a PromiseHook is enabled or the
+</span><span style="color:#75715e"></span>  <span style="color:#75715e">// debugger is active, to make sure we expose spec compliant behavior.
+</span><span style="color:#75715e"></span>  <span style="color:#66d9ef">const</span> nativeContext <span style="color:#f92672">=</span> LoadNativeContext(context);
+  <span style="color:#66d9ef">const</span> promiseThen <span style="color:#f92672">=</span> <span style="color:#f92672">*</span>NativeContextSlot(ContextSlot<span style="color:#f92672">::</span>PROMISE_THEN_INDEX);
+  <span style="color:#66d9ef">if</span> (TaggedEqual(then, promiseThen) <span style="color:#f92672">&amp;&amp;</span>
+      <span style="color:#f92672">!</span>IsPromiseHookEnabledOrDebugIsActiveOrHasAsyncEventDelegate()) {
+    <span style="color:#75715e">// We know that the {thenable} is a JSPromise, which doesn&#39;t require
+</span><span style="color:#75715e"></span>    <span style="color:#75715e">// any special treatment and that {then} corresponds to the initial
+</span><span style="color:#75715e"></span>    <span style="color:#75715e">// Promise.prototype.then method. So instead of allocating a temporary
+</span><span style="color:#75715e"></span>    <span style="color:#75715e">// JSPromise to connect the {thenable} with the {promise_to_resolve},
+</span><span style="color:#75715e"></span>    <span style="color:#75715e">// we can directly schedule the {promise_to_resolve} with default
+</span><span style="color:#75715e"></span>    <span style="color:#75715e">// handlers onto the {thenable} promise. This does not only save the
+</span><span style="color:#75715e"></span>    <span style="color:#75715e">// JSPromise allocation, but also avoids the allocation of the two
+</span><span style="color:#75715e"></span>    <span style="color:#75715e">// resolving closures and the shared context.
+</span><span style="color:#75715e"></span>    <span style="color:#75715e">//
+</span><span style="color:#75715e"></span>    <span style="color:#75715e">// What happens normally in this case is
+</span><span style="color:#75715e"></span>    <span style="color:#75715e">//
+</span><span style="color:#75715e"></span>    <span style="color:#75715e">//   resolve, reject = CreateResolvingFunctions(promise_to_resolve)
+</span><span style="color:#75715e"></span>    <span style="color:#75715e">//   result_capability = NewPromiseCapability(%Promise%)
+</span><span style="color:#75715e"></span>    <span style="color:#75715e">//   PerformPromiseThen(thenable, resolve, reject, result_capability)
+</span><span style="color:#75715e"></span>    <span style="color:#75715e">//
+</span><span style="color:#75715e"></span>    <span style="color:#75715e">// which means that PerformPromiseThen will either schedule a new
+</span><span style="color:#75715e"></span>    <span style="color:#75715e">// PromiseReaction with resolve and reject or a PromiseReactionJob
+</span><span style="color:#75715e"></span>    <span style="color:#75715e">// with resolve or reject based on the state of {thenable}. And
+</span><span style="color:#75715e"></span>    <span style="color:#75715e">// resolve or reject will just invoke the default [[Resolve]] or
+</span><span style="color:#75715e"></span>    <span style="color:#75715e">// [[Reject]] functions on the {promise_to_resolve}.
+</span><span style="color:#75715e"></span>    <span style="color:#75715e">//
+</span><span style="color:#75715e"></span>    <span style="color:#75715e">// This is the same as just doing
+</span><span style="color:#75715e"></span>    <span style="color:#75715e">//
+</span><span style="color:#75715e"></span>    <span style="color:#75715e">//   PerformPromiseThen(thenable, undefined, undefined,
+</span><span style="color:#75715e"></span>    <span style="color:#75715e">//   promise_to_resolve)
+</span><span style="color:#75715e"></span>    <span style="color:#75715e">//
+</span><span style="color:#75715e"></span>    <span style="color:#75715e">// which performs exactly the same (observable) steps.
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">return</span> PerformPromiseThen(
+        UnsafeCast<span style="color:#f92672">&lt;</span>JSPromise<span style="color:#f92672">&gt;</span>(thenable), UndefinedConstant(),
+        UndefinedConstant(), promiseToResolve);
+  } <span style="color:#66d9ef">else</span> {
+    <span style="color:#66d9ef">const</span> funcs <span style="color:#f92672">=</span>
+        CreatePromiseResolvingFunctions(promiseToResolve, False, nativeContext);
+    <span style="color:#66d9ef">const</span> resolve <span style="color:#f92672">=</span> funcs.resolve;
+    <span style="color:#66d9ef">const</span> reject <span style="color:#f92672">=</span> funcs.reject;
+    <span style="color:#66d9ef">try</span> {
+      <span style="color:#66d9ef">return</span> Call(
+          context, UnsafeCast<span style="color:#f92672">&lt;</span>Callable<span style="color:#f92672">&gt;</span>(then), thenable, resolve, reject);
+    } <span style="color:#66d9ef">catch</span> (e) {
+      <span style="color:#66d9ef">return</span> Call(context, UnsafeCast<span style="color:#f92672">&lt;</span>Callable<span style="color:#f92672">&gt;</span>(reject), Undefined, e);
+    }
+  }
+}
+</code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-C++" data-lang="C++"><span style="color:#75715e">// src/builtins/promise-abstract-operations.tq
+</span><span style="color:#75715e"></span><span style="color:#960050;background-color:#1e0010">@</span><span style="color:#66d9ef">export</span>
 transitioning macro PerformPromiseThenImpl(implicit context: Context)(
     promise: JSPromise, onFulfilled: Callable<span style="color:#f92672">|</span>Undefined,
     onRejected: Callable<span style="color:#f92672">|</span>Undefined,
     resultPromiseOrCapability: JSPromise<span style="color:#f92672">|</span>PromiseCapability<span style="color:#f92672">|</span>Undefined)<span style="color:#f92672">:</span> <span style="color:#66d9ef">void</span> {
+    DebugBreak();
   <span style="color:#66d9ef">if</span> (promise.Status() <span style="color:#f92672">==</span> PromiseState<span style="color:#f92672">::</span>kPending) {
     <span style="color:#75715e">// The {promise} is still in &#34;Pending&#34; state, so we just record a new
 </span><span style="color:#75715e"></span>    <span style="color:#75715e">// PromiseReaction holding both the onFulfilled and onRejected callbacks.
@@ -140,7 +204,8 @@ transitioning macro PerformPromiseThenImpl(implicit context: Context)(
   }
   promise.SetHasHandler();
 }
-</code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-C++" data-lang="C++"><span style="color:#75715e">// https://tc39.es/ecma262/#sec-performpromisethen
+</code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-C++" data-lang="C++"><span style="color:#75715e">// src/builtins/promise-abstract-operations.tq
+</span><span style="color:#75715e">// https://tc39.es/ecma262/#sec-performpromisethen
 </span><span style="color:#75715e"></span>transitioning builtin
 <span style="color:#a6e22e">PerformPromiseThen</span>(implicit context: Context)(
     promise: JSPromise, onFulfilled: Callable<span style="color:#f92672">|</span>Undefined,
@@ -148,7 +213,8 @@ transitioning macro PerformPromiseThenImpl(implicit context: Context)(
   PerformPromiseThenImpl(promise, onFulfilled, onRejected, resultPromise);
   <span style="color:#66d9ef">return</span> resultPromise;
 }
-</code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-C++" data-lang="C++"><span style="color:#75715e">// https://tc39.es/ecma262/#sec-promise-executor
+</code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-C++" data-lang="C++"><span style="color:#75715e">// src/builtins/promise-constructor.tq
+</span><span style="color:#75715e">// https://tc39.es/ecma262/#sec-promise-executor
 </span><span style="color:#75715e"></span>transitioning javascript builtin
 <span style="color:#a6e22e">PromiseConstructor</span>(
     js<span style="color:#f92672">-</span>implicit context: NativeContext, receiver: JSAny,
