@@ -69,7 +69,7 @@
   <title>clock</title>
   <circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline>
 </svg>
-          4 min read
+          3 min read
         </div>
       </div>
     </header>
@@ -100,7 +100,7 @@ tools/dev/gm.py x64.debug
      // any special treatment and that {then} corresponds to the initial
      // Promise.prototype.then method. So instead of allocating a temporary
 </code></pre></div><h3 id="poc-and-analysis">POC and Analysis</h3>
-<p>Full code:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-js" data-lang="js"></code></pre></div><p>In the following code we can see the <code>if</code> statement which calls the <code>TaggedEqual</code> function to check if <code>then</code> and <code>promiseThen</code> are equal. If we bypass this check, <code>PerformPromiseThen</code> function is called where <code>UnsafeCast</code> is performed on <code>thenable</code>.</p>
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-C++" data-lang="C++"><span style="color:#75715e">// src/builtins/promise-jobs.tq
 </span><span style="color:#75715e">// https://tc39.es/ecma262/#sec-promiseresolvethenablejob
 </span><span style="color:#75715e"></span>transitioning builtin
@@ -119,27 +119,7 @@ tools/dev/gm.py x64.debug
   <span style="color:#66d9ef">const</span> promiseThen <span style="color:#f92672">=</span> <span style="color:#f92672">*</span>NativeContextSlot(ContextSlot<span style="color:#f92672">::</span>PROMISE_THEN_INDEX);
   <span style="color:#66d9ef">if</span> (TaggedEqual(then, promiseThen) <span style="color:#f92672">&amp;&amp;</span>
       <span style="color:#f92672">!</span>IsPromiseHookEnabledOrDebugIsActiveOrHasAsyncEventDelegate()) {
-    <span style="color:#75715e">// We know that the {thenable} is a JSPromise, which doesn&#39;t require
-</span><span style="color:#75715e"></span>    <span style="color:#75715e">// any special treatment and that {then} corresponds to the initial
-</span><span style="color:#75715e"></span>    <span style="color:#75715e">// Promise.prototype.then method. So instead of allocating a temporary
-</span><span style="color:#75715e"></span>    <span style="color:#75715e">// JSPromise to connect the {thenable} with the {promise_to_resolve},
-</span><span style="color:#75715e"></span>    <span style="color:#75715e">// we can directly schedule the {promise_to_resolve} with default
-</span><span style="color:#75715e"></span>    <span style="color:#75715e">// handlers onto the {thenable} promise. This does not only save the
-</span><span style="color:#75715e"></span>    <span style="color:#75715e">// JSPromise allocation, but also avoids the allocation of the two
-</span><span style="color:#75715e"></span>    <span style="color:#75715e">// resolving closures and the shared context.
-</span><span style="color:#75715e"></span>    <span style="color:#75715e">//
-</span><span style="color:#75715e"></span>    <span style="color:#75715e">// What happens normally in this case is
-</span><span style="color:#75715e"></span>    <span style="color:#75715e">//
-</span><span style="color:#75715e"></span>    <span style="color:#75715e">//   resolve, reject = CreateResolvingFunctions(promise_to_resolve)
-</span><span style="color:#75715e"></span>    <span style="color:#75715e">//   result_capability = NewPromiseCapability(%Promise%)
-</span><span style="color:#75715e"></span>    <span style="color:#75715e">//   PerformPromiseThen(thenable, resolve, reject, result_capability)
-</span><span style="color:#75715e"></span>    <span style="color:#75715e">//
-</span><span style="color:#75715e"></span>    <span style="color:#75715e">// which means that PerformPromiseThen will either schedule a new
-</span><span style="color:#75715e"></span>    <span style="color:#75715e">// PromiseReaction with resolve and reject or a PromiseReactionJob
-</span><span style="color:#75715e"></span>    <span style="color:#75715e">// with resolve or reject based on the state of {thenable}. And
-</span><span style="color:#75715e"></span>    <span style="color:#75715e">// resolve or reject will just invoke the default [[Resolve]] or
-</span><span style="color:#75715e"></span>    <span style="color:#75715e">// [[Reject]] functions on the {promise_to_resolve}.
-</span><span style="color:#75715e"></span>    <span style="color:#75715e">//
+    <span style="color:#75715e">// [...]
 </span><span style="color:#75715e"></span>    <span style="color:#75715e">// This is the same as just doing
 </span><span style="color:#75715e"></span>    <span style="color:#75715e">//
 </span><span style="color:#75715e"></span>    <span style="color:#75715e">//   PerformPromiseThen(thenable, undefined, undefined,
@@ -150,17 +130,8 @@ tools/dev/gm.py x64.debug
         UnsafeCast<span style="color:#f92672">&lt;</span>JSPromise<span style="color:#f92672">&gt;</span>(thenable), UndefinedConstant(),
         UndefinedConstant(), promiseToResolve);
   } <span style="color:#66d9ef">else</span> {
-    <span style="color:#66d9ef">const</span> funcs <span style="color:#f92672">=</span>
-        CreatePromiseResolvingFunctions(promiseToResolve, False, nativeContext);
-    <span style="color:#66d9ef">const</span> resolve <span style="color:#f92672">=</span> funcs.resolve;
-    <span style="color:#66d9ef">const</span> reject <span style="color:#f92672">=</span> funcs.reject;
-    <span style="color:#66d9ef">try</span> {
-      <span style="color:#66d9ef">return</span> Call(
-          context, UnsafeCast<span style="color:#f92672">&lt;</span>Callable<span style="color:#f92672">&gt;</span>(then), thenable, resolve, reject);
-    } <span style="color:#66d9ef">catch</span> (e) {
-      <span style="color:#66d9ef">return</span> Call(context, UnsafeCast<span style="color:#f92672">&lt;</span>Callable<span style="color:#f92672">&gt;</span>(reject), Undefined, e);
-    }
-  }
+    <span style="color:#75715e">// [...]
+</span><span style="color:#75715e"></span>  }
 }
 </code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-C++" data-lang="C++"><span style="color:#75715e">// src/builtins/promise-abstract-operations.tq
 </span><span style="color:#75715e"></span><span style="color:#960050;background-color:#1e0010">@</span><span style="color:#66d9ef">export</span>
@@ -182,27 +153,8 @@ transitioning macro PerformPromiseThenImpl(implicit context: Context)(
         onFulfilled, onRejected);
     promise.reactions_or_result <span style="color:#f92672">=</span> reaction;
   } <span style="color:#66d9ef">else</span> {
-    <span style="color:#66d9ef">const</span> reactionsOrResult <span style="color:#f92672">=</span> promise.reactions_or_result;
-    let microtask: PromiseReactionJobTask;
-    let handlerContext: Context;
-    <span style="color:#66d9ef">if</span> (promise.Status() <span style="color:#f92672">==</span> PromiseState<span style="color:#f92672">::</span>kFulfilled) {
-      handlerContext <span style="color:#f92672">=</span> ExtractHandlerContext(onFulfilled, onRejected);
-      microtask <span style="color:#f92672">=</span> NewPromiseFulfillReactionJobTask(
-          handlerContext, reactionsOrResult, onFulfilled,
-          resultPromiseOrCapability);
-    } <span style="color:#66d9ef">else</span>
-      deferred {
-        assert(promise.Status() <span style="color:#f92672">==</span> PromiseState<span style="color:#f92672">::</span>kRejected);
-        handlerContext <span style="color:#f92672">=</span> ExtractHandlerContext(onRejected, onFulfilled);
-        microtask <span style="color:#f92672">=</span> NewPromiseRejectReactionJobTask(
-            handlerContext, reactionsOrResult, onRejected,
-            resultPromiseOrCapability);
-        <span style="color:#66d9ef">if</span> (<span style="color:#f92672">!</span>promise.HasHandler()) {
-          runtime<span style="color:#f92672">::</span>PromiseRevokeReject(promise);
-        }
-      }
-    EnqueueMicrotask(handlerContext, microtask);
-  }
+    <span style="color:#75715e">// [...]
+</span><span style="color:#75715e"></span>  }
   promise.SetHasHandler();
 }
 </code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-C++" data-lang="C++"><span style="color:#75715e">// src/builtins/promise-abstract-operations.tq
