@@ -169,8 +169,18 @@ transitioning macro PerformPromiseThenImpl(implicit context: Context)(
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-asm" data-lang="asm"><span style="color:#75715e"># dword ptr [r8 + 0x3f] = 0x082096f1 = promiseThen
 </span><span style="color:#75715e"># ecx = 0x082096f1 = then
 </span><span style="color:#75715e"></span><span style="color:#a6e22e">cmp</span> <span style="color:#66d9ef">dword</span> <span style="color:#66d9ef">ptr</span> [<span style="color:#66d9ef">r8</span> <span style="color:#960050;background-color:#1e0010">+</span> <span style="color:#ae81ff">0x3f</span>], <span style="color:#66d9ef">ecx</span> 
-</code></pre></div><p>If we bypass this comparision, <code>PerformPromiseThen</code> function is called where the first parameter <code>thenable</code> is <code>UnsafeCast</code>ed to <code>JSPromise</code>. This basically means that it&rsquo;ll typecast <code>thenable</code> to <code>JSPromise</code> without checking type. If we bypass the <code>TaggedEqual</code> check and craft the fake <code>JSPromise object (thenable)</code> it&rsquo;ll cause the type confusion which we&rsquo;ll prove in the later section.</p>
+</code></pre></div><p>If we bypass this comparision, <code>PerformPromiseThen</code> function is called where the first parameter <code>thenable</code> is <code>UnsafeCast</code>ed to <code>JSPromise</code>. This basically means that it&rsquo;ll typecast <code>thenable</code> to <code>JSPromise</code> without checking type. If we bypass the <code>TaggedEqual</code> check and craft the fake <code>JSPromise object (thenable)</code> it&rsquo;ll cause the type confusion which we&rsquo;ll confirm in the later section.</p>
+<p><code>PerformPromiseThen</code> will call another function <code>PerformPromiseThenImpl</code> where the first parameter i.e., typecasted <code>thenable</code> as <code>JSPromise</code> is passed as the promise.</p>
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-C++" data-lang="C++"><span style="color:#75715e">// src/builtins/promise-abstract-operations.tq
+</span><span style="color:#75715e">// https://tc39.es/ecma262/#sec-performpromisethen
+</span><span style="color:#75715e"></span>transitioning builtin
+<span style="color:#a6e22e">PerformPromiseThen</span>(implicit context: Context)(
+    promise: JSPromise, onFulfilled: Callable<span style="color:#f92672">|</span>Undefined,
+    onRejected: Callable<span style="color:#f92672">|</span>Undefined, resultPromise: JSPromise<span style="color:#f92672">|</span>Undefined)<span style="color:#f92672">:</span> JSAny {
+  PerformPromiseThenImpl(promise, onFulfilled, onRejected, resultPromise);
+  <span style="color:#66d9ef">return</span> resultPromise;
+}
+</code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-C++" data-lang="C++"><span style="color:#75715e">// src/builtins/promise-abstract-operations.tq
 </span><span style="color:#75715e"></span><span style="color:#960050;background-color:#1e0010">@</span><span style="color:#66d9ef">export</span>
 transitioning macro PerformPromiseThenImpl(implicit context: Context)(
     promise: JSPromise, onFulfilled: Callable<span style="color:#f92672">|</span>Undefined,
@@ -193,15 +203,6 @@ transitioning macro PerformPromiseThenImpl(implicit context: Context)(
     <span style="color:#75715e">// [...]
 </span><span style="color:#75715e"></span>  }
   promise.SetHasHandler();
-}
-</code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-C++" data-lang="C++"><span style="color:#75715e">// src/builtins/promise-abstract-operations.tq
-</span><span style="color:#75715e">// https://tc39.es/ecma262/#sec-performpromisethen
-</span><span style="color:#75715e"></span>transitioning builtin
-<span style="color:#a6e22e">PerformPromiseThen</span>(implicit context: Context)(
-    promise: JSPromise, onFulfilled: Callable<span style="color:#f92672">|</span>Undefined,
-    onRejected: Callable<span style="color:#f92672">|</span>Undefined, resultPromise: JSPromise<span style="color:#f92672">|</span>Undefined)<span style="color:#f92672">:</span> JSAny {
-  PerformPromiseThenImpl(promise, onFulfilled, onRejected, resultPromise);
-  <span style="color:#66d9ef">return</span> resultPromise;
 }
 </code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-C++" data-lang="C++"><span style="color:#75715e">// src/builtins/promise-constructor.tq
 </span><span style="color:#75715e">// https://tc39.es/ecma262/#sec-promise-executor
