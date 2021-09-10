@@ -6,7 +6,16 @@
     <description>Recent content in Posts on Xploiter</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Sat, 04 Sep 2021 19:22:16 +0545</lastBuildDate><atom:link href="https://xpldotjs.github.io/posts/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Fri, 10 Sep 2021 18:22:03 +0545</lastBuildDate><atom:link href="https://xpldotjs.github.io/posts/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Math.exmp1 bug - 35C3 CTF</title>
+      <link>https://xpldotjs.github.io/posts/math.exmp1-bug-35c3-ctf/</link>
+      <pubDate>Fri, 10 Sep 2021 18:22:03 +0545</pubDate>
+      
+      <guid>https://xpldotjs.github.io/posts/math.exmp1-bug-35c3-ctf/</guid>
+      <description>Setup fetch v8 cd v8 git reset --hard dde25872f58951bb0148cf43d6a504ab2f280485 gclient sync git apply &amp;lt; ../d8-strip-globals.patch git apply &amp;lt; ../revert-bugfix-880207.patch git apply &amp;lt; ../open_files_readonly.patch tools/dev/gm.py x64.release Patch Analysis diff --git a/src/compiler/typer.cc b/src/compiler/typer.cc index 60e7ed574a..8324dc06d7 100644 --- a/src/compiler/typer.cc +++ b/src/compiler/typer.cc @@ -1491,6 +1491,7 @@ Type Typer::Visitor::JSCallTyper(Type fun, Typer* t) {  // Unary math functions. case BuiltinFunctionId::kMathAbs: case BuiltinFunctionId::kMathExp: + case BuiltinFunctionId::kMathExpm1:  return Type::Union(Type::PlainNumber(), Type::NaN(), t-&amp;gt;zone()); case BuiltinFunctionId::kMathAcos: case BuiltinFunctionId::kMathAcosh: @@ -1500,7 +1501,6 @@ Type Typer::Visitor::JSCallTyper(Type fun, Typer* t) {  case BuiltinFunctionId::kMathAtanh: case BuiltinFunctionId::kMathCbrt: case BuiltinFunctionId::kMathCos: - case BuiltinFunctionId::kMathExpm1:  case BuiltinFunctionId::kMathFround: case BuiltinFunctionId::kMathLog: case BuiltinFunctionId::kMathLog1p: As we can see in the patch that if the function builtin id is kMathExpm1 it&amp;rsquo;ll return type of Union(PlainNumber, NAN).</description>
+    </item>
+    
     <item>
       <title>The False Promise Plaidctf</title>
       <link>https://xpldotjs.github.io/posts/the-false-promise-plaidctf/</link>
