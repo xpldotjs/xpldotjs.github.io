@@ -116,7 +116,17 @@ index 60e7ed574a..8324dc06d7 100644
 </span></span><span style="color:#75715e"></span>
 </code></pre></div><p>If we run this POC, firt console <code>[1]</code> should print <code>true</code> and second console <code>[2]</code> should print <code>false</code>. However, the second console <code>[2]</code> prints <code>true</code> in this case. At this point I lost the battle. I really don&rsquo;t know why the bug isn&rsquo;t triggering.</p>
 <p>Then I ran the POC with the argument <code>--trace-turbo</code> and spent about an hour in turbolizer.</p>
-<h3 id="poc-and-analysis">POC and Analysis</h3>
+<p><img src="/posts/static/MathExpm1/001-typer_NumberExpm1.png" alt="typer_NumberExmp1"></p>
+<p>As we can see in the image <code>NumberExpm1</code> is of type <code>Number</code> which is not as we expected. The type should be <code>PlainNumber | NAN</code> to trigger the bug.</p>
+<p><img src="/posts/static/MathExpm1/002-simplifiedlowering_NumberExpm1.png" alt="simplifiedlowering_NumberExpm1"></p>
+<p>Then I put the breakpoint on the <code>typer.cc</code> and ran the <code>d8</code> shell in gdb. Unfortunately the breakpoint didn&rsquo;t hit.</p>
+<p><img src="/posts/static/MathExpm1/003-didnt_hit_breakpoint.png" alt="breakpoint-failed"></p>
+<p>Then I found out that in <code>operation-typer.cc</code> when NumberExpm1 is called it&rsquo;ll return type <code>Number</code>.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c++" data-lang="c++">Type OperationTyper<span style="color:#f92672">::</span>NumberExpm1(Type type) {
+  DCHECK(type.Is(Type<span style="color:#f92672">::</span>Number()));
+  <span style="color:#66d9ef">return</span> Type<span style="color:#f92672">::</span>Number();
+}
+</code></pre></div><h3 id="poc-and-analysis">POC and Analysis</h3>
 
     </div>
     <div class="post-footer">
