@@ -639,7 +639,16 @@ In addition, the type of the constant value <code>10 (x0)</code> is <code>Range(
                        input_count, inputs, temp_count, temps);
   <span style="color:#66d9ef">return</span> <span style="color:#a6e22e">Emit</span>(instr);
 }
-</code></pre></div><h3 id="references">References</h3>
+</code></pre></div><h3 id="deoptimization-kind">Deoptimization Kind</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-C++" data-lang="C++"><span style="color:#75715e">// Deoptimize bailout kind:
+</span><span style="color:#75715e">// - Eager: a check failed in the optimized code and deoptimization happens
+</span><span style="color:#75715e">//   immediately.
+</span><span style="color:#75715e">// - Lazy: the code has been marked as dependent on some assumption which
+</span><span style="color:#75715e">//   is checked elsewhere and can trigger deoptimization the next time the
+</span><span style="color:#75715e">//   code is executed.
+</span><span style="color:#75715e">// - Soft: similar to lazy deoptimization, but does not contribute to the
+</span><span style="color:#75715e">//   total deopt count which can lead to disabling optimization for a function.
+</span></code></pre></div><h3 id="references">References</h3>
 <p><a href="https://doar-e.github.io/blog/2019/01/28/introduction-to-turbofan/">https://doar-e.github.io/blog/2019/01/28/introduction-to-turbofan/</a></p>
 
     </div>
