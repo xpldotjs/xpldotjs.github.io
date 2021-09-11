@@ -121,12 +121,18 @@ index 60e7ed574a..8324dc06d7 100644
 <p><img src="/posts/static/MathExpm1/002-simplifiedlowering_NumberExpm1.png" alt="simplifiedlowering_NumberExpm1"></p>
 <p>Then I put the breakpoint on the <code>typer.cc</code> and ran the <code>d8</code> shell in gdb. Unfortunately the breakpoint didn&rsquo;t hit.</p>
 <p><img src="/posts/static/MathExpm1/003-didnt_hit_breakpoint.png" alt="breakpoint-failed"></p>
-<p>Then I found out that in <code>operation-typer.cc</code> when NumberExpm1 is called it&rsquo;ll return type <code>Number</code>.</p>
+<p>Then I found out that in <code>operation-typer.cc</code> when <code>NumberExpm1</code> is called it&rsquo;ll return type <code>Number</code>. The <code>NumberExpm1</code> is being called from 3 different phases.</p>
+<ol>
+<li>Typer Phase = Typer::Visitor::Reduce</li>
+<li>LoadElimination Phase = TypeNarrowingReducer::Reduce</li>
+<li>SimplifiedLowering Phase = RepresentationSelector::UpdateFeedbackType</li>
+</ol>
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c++" data-lang="c++">Type OperationTyper<span style="color:#f92672">::</span>NumberExpm1(Type type) {
   DCHECK(type.Is(Type<span style="color:#f92672">::</span>Number()));
   <span style="color:#66d9ef">return</span> Type<span style="color:#f92672">::</span>Number();
 }
-</code></pre></div><h3 id="poc-and-analysis">POC and Analysis</h3>
+</code></pre></div><p>At this point I only have 1 thing on my mind which is to somehow trigger <code>kMathExpm1</code> in <code>JSCallTyper</code> function which is in <code>typer.cc</code>.</p>
+<h3 id="poc-and-analysis">POC and Analysis</h3>
 
     </div>
     <div class="post-footer">
