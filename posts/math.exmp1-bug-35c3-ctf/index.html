@@ -212,8 +212,8 @@ arr<span style="color:#f92672">[</span><span style="color:#ae81ff">0</span> * 13
 </code></pre></div><p>In the above POC after the <code>EscapeAnalysis</code> phase the <code>SameValue</code> node will know the second parameter <code>mz.a</code> is <code>-0</code> <code>(NumberConstant[-0])</code>. This type information will be used in <code>SimplifiedLowering</code> phase which in result eliminates the checkbounds. In <code>SimplifiedLowering</code> phase while updating the feedback type using <code>UpdateFeedbackType</code> function, the old type will be replaced by the new type <code>(NumberConstant[-0])</code>. Which in result <code>NumberMultiply</code> node generates range (0,0). The <code>NumberMultiply</code> node range <code>(0,0)</code> is then passed to the <code>CheckBounds</code> node as an index. Then the <code>index</code> is less than the <code>length</code> of an array which in result eliminates the checkbounds.</p>
 <p>As we can see in the following image, Unline POC stage 1, <code>SameValue</code> node is still there in <code>LoadElimination</code> phase and the second parameter is still <code>unknown</code> <code>(LoadField[+24])</code>.</p>
 <p><img src="/posts/static/MathExpm1/006-samevalue-boolean-loadfield.png" alt="Samevalue-loadfield"></p>
-<p>Now in <code>EscapeAnalysis</code> phase the second parameter is know i.e., <code>NumberConstant[-0]</code>.
-<img src="/posts/static/MathExpm1/006-NumberConstant.png" alt="EscapeAnalysis-NumberConstant"></p>
+<p>Now in <code>EscapeAnalysis</code> phase the second parameter is know i.e., <code>NumberConstant[-0]</code>.</p>
+<p><img src="/posts/static/MathExpm1/006-NumberConstant.png" alt="EscapeAnalysis-NumberConstant"></p>
 
     </div>
     <div class="post-footer">
