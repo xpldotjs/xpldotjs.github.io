@@ -173,7 +173,27 @@ index 60e7ed574a..8324dc06d7 100644
 }
 	
 <span style="color:#a6e22e">console</span>.<span style="color:#a6e22e">log</span>(<span style="color:#a6e22e">xploit</span>(<span style="color:#f92672">-</span><span style="color:#ae81ff">0</span>));
-</code></pre></div><p>When the above POC is executed, in <code>TypedLowering</code> stage <code>ConstantFoldingReducer</code> will replace <code>SameValue</code> node with <code>HeapConstant[0xxxxx83200709 &lt;false&gt;]</code></p>
+</code></pre></div><p>When the above POC is executed, in <code>TypedLowering</code> stage <code>ConstantFoldingReducer</code> will replace <code>SameValue</code> node with <code>HeapConstant[0xxxxx83200709 &lt;false&gt;]</code>. Then the compiler will know that it is a False constant. Which in result will access 0th index. So we need to prevent it from performing constant folding.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">idx <span style="color:#f92672">=</span> false <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>
+arr<span style="color:#f92672">[</span>idx * 137<span style="color:#f92672">]</span>
+arr<span style="color:#f92672">[</span><span style="color:#ae81ff">0</span> * 137<span style="color:#f92672">]</span>
+</code></pre></div><p><img src="/posts/static/MathExpm1/006-samevalue-heapconstant.png" alt="heapconstant"></p>
+<h4 id="constantfoldingreducer">ConstantFoldingReducer</h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-C++" data-lang="C++">Reduction ConstantFoldingReducer<span style="color:#f92672">::</span>Reduce(Node<span style="color:#f92672">*</span> node) {
+  <span style="color:#75715e">// [...]
+</span><span style="color:#75715e"></span>    Type upper <span style="color:#f92672">=</span> NodeProperties<span style="color:#f92672">::</span>GetType(node);
+    <span style="color:#66d9ef">if</span> (<span style="color:#f92672">!</span>upper.IsNone()) {
+      Node<span style="color:#f92672">*</span> replacement <span style="color:#f92672">=</span> <span style="color:#66d9ef">nullptr</span>;
+      <span style="color:#66d9ef">if</span> (upper.IsHeapConstant()) {
+<span style="display:block;width:100%;background-color:#3c3d38">        replacement <span style="color:#f92672">=</span> jsgraph()<span style="color:#f92672">-&gt;</span>Constant(upper.AsHeapConstant()<span style="color:#f92672">-&gt;</span>Ref());
+</span>      }
+      <span style="color:#75715e">// [...]
+</span><span style="color:#75715e"></span>    }
+  }
+  <span style="color:#66d9ef">return</span> <span style="color:#a6e22e">NoChange</span>();
+}
+</code></pre></div><p><img src="/posts/static/MathExpm1/005-constantfoldingreducer.png" alt="constantfoldingreducer"></p>
+<p>To prevent from performing constant folding we will not give the information to the compiler that the second parameter is <code>-0</code> until the <code>EscapeAnalysis</code> phase:</p>
 <p>POC stage 2:</p>
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-JS" data-lang="JS"><span style="color:#66d9ef">function</span> <span style="color:#a6e22e">xploit</span>(<span style="color:#a6e22e">x</span>) {
 	<span style="color:#66d9ef">let</span> <span style="color:#a6e22e">mz</span> <span style="color:#f92672">=</span> {<span style="color:#a6e22e">a</span><span style="color:#f92672">:-</span><span style="color:#ae81ff">0</span>}
@@ -189,7 +209,11 @@ index 60e7ed574a..8324dc06d7 100644
 }
 	
 <span style="color:#a6e22e">console</span>.<span style="color:#a6e22e">log</span>(<span style="color:#a6e22e">xploit</span>(<span style="color:#f92672">-</span><span style="color:#ae81ff">0</span>));
-</code></pre></div><p>In the above POC after the <code>EscapeAnalysis</code> phase the <code>SameValue</code> node will know the second parameter <code>mz.a</code> is <code>-0</code> <code>(NumberConstant[-0])</code>. This type information will be used in <code>SimplifiedLowering</code> phase which in result eliminates the checkbounds. In <code>SimplifiedLowering</code> phase while updating the feedback type using <code>UpdateFeedbackType</code> function the old type will be replaced by the new type <code>(NumberConstant[-0])</code>. Which in result <code>NumberMultiply</code> node generates range (0,0). The <code>NumberMultiply</code> node range <code>(0,0)</code> is then passed to the <code>CheckBounds</code> node as an index. Then the <code>index</code> is less than the <code>length</code> of an array which in result eliminates the checkbounds.</p>
+</code></pre></div><p>In the above POC after the <code>EscapeAnalysis</code> phase the <code>SameValue</code> node will know the second parameter <code>mz.a</code> is <code>-0</code> <code>(NumberConstant[-0])</code>. This type information will be used in <code>SimplifiedLowering</code> phase which in result eliminates the checkbounds. In <code>SimplifiedLowering</code> phase while updating the feedback type using <code>UpdateFeedbackType</code> function, the old type will be replaced by the new type <code>(NumberConstant[-0])</code>. Which in result <code>NumberMultiply</code> node generates range (0,0). The <code>NumberMultiply</code> node range <code>(0,0)</code> is then passed to the <code>CheckBounds</code> node as an index. Then the <code>index</code> is less than the <code>length</code> of an array which in result eliminates the checkbounds.</p>
+<p>As we can see in the following image, Unline POC stage 1, <code>SameValue</code> node is still there in <code>LoadElimination</code> phase and the second parameter is still <code>unknown</code> <code>(LoadField[+24])</code>.</p>
+<p><img src="/posts/static/MathExpm1/006-samevalue-boolean-loadfield.png" alt="Samevalue-loadfield"></p>
+<p>Now in <code>EscapeAnalysis</code> phase the second parameter is know i.e., <code>NumberConstant[-0]</code>.
+<img src="/posts/static/MathExpm1/006-NumberConstant.png" alt="EscapeAnalysis-NumberConstant"></p>
 
     </div>
     <div class="post-footer">
