@@ -6,7 +6,16 @@
     <description>Recent content on Xploiter</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Fri, 10 Sep 2021 18:22:03 +0545</lastBuildDate><atom:link href="https://xpldotjs.github.io/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Wed, 15 Sep 2021 00:44:03 +0545</lastBuildDate><atom:link href="https://xpldotjs.github.io/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>N1CTF 2020 Escape</title>
+      <link>https://xpldotjs.github.io/posts/n1ctf-2020-escape/</link>
+      <pubDate>Wed, 15 Sep 2021 00:44:03 +0545</pubDate>
+      
+      <guid>https://xpldotjs.github.io/posts/n1ctf-2020-escape/</guid>
+      <description></description>
+    </item>
+    
     <item>
       <title>Math.exmp1 bug - 35C3 CTF</title>
       <link>https://xpldotjs.github.io/posts/math.exmp1-bug-35c3-ctf/</link>
