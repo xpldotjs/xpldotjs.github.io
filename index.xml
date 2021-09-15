@@ -13,7 +13,7 @@
       <pubDate>Wed, 15 Sep 2021 00:44:03 +0545</pubDate>
       
       <guid>https://xpldotjs.github.io/posts/n1ctf-2020-escape/</guid>
-      <description></description>
+      <description>Setup Patch diff --git a/src/compiler/escape-analysis.cc b/src/compiler/escape-analysis.cc index 2a096b6933..3046d7b04e 100644 --- a/src/compiler/escape-analysis.cc +++ b/src/compiler/escape-analysis.cc @@ -178,7 +178,7 @@ class EscapeAnalysisTracker : public ZoneObject {  : VariableTracker::Scope(&amp;amp;tracker-&amp;gt;variable_states_, node, reduction), tracker_(tracker), reducer_(reducer) {} - const VirtualObject* GetVirtualObject(Node* node) { + VirtualObject* GetVirtualObject(Node* node) {  VirtualObject* vobject = tracker_-&amp;gt;virtual_objects_.Get(node); if (vobject) vobject-&amp;gt;AddDependency(current_node()); return vobject; @@ -576,10 +576,14 @@ void ReduceNode(const Operator* op, EscapeAnalysisTracker::Scope* current,  case IrOpcode::kStoreField: { Node* object = current-&amp;gt;ValueInput(0); Node* value = current-&amp;gt;ValueInput(1); - const VirtualObject* vobject = current-&amp;gt;GetVirtualObject(object); + VirtualObject* vobject = current-&amp;gt;GetVirtualObject(object);  Variable var; if (vobject &amp;amp;&amp;amp; !</description>
     </item>
     
     <item>
