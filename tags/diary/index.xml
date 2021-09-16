@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>diary on Xploiter</title>
+    <link>https://xpldotjs.github.io/tags/diary/</link>
+    <description>Recent content in diary on Xploiter</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Thu, 16 Sep 2021 20:23:56 +0545</lastBuildDate><atom:link href="https://xpldotjs.github.io/tags/diary/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>My Diary</title>
+      <link>https://xpldotjs.github.io/posts/my-diary/</link>
+      <pubDate>Thu, 16 Sep 2021 20:23:56 +0545</pubDate>
+      
+      <guid>https://xpldotjs.github.io/posts/my-diary/</guid>
+      <description>16-09-2021  Reading &amp;ldquo;Modern attacks on the Chrome browser : optimizations and deoptimizations&amp;rdquo; &amp;mdash; link Understaning stuffs in V8 codebase.  </description>
+    </item>
+    
+  </channel>
+</rss>
