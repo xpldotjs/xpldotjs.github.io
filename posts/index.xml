@@ -6,14 +6,23 @@
     <description>Recent content in Posts on Xploiter</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Wed, 15 Sep 2021 00:44:03 +0545</lastBuildDate><atom:link href="https://xpldotjs.github.io/posts/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Thu, 16 Sep 2021 20:23:56 +0545</lastBuildDate><atom:link href="https://xpldotjs.github.io/posts/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>My Diary</title>
+      <link>https://xpldotjs.github.io/posts/my-diary/</link>
+      <pubDate>Thu, 16 Sep 2021 20:23:56 +0545</pubDate>
+      
+      <guid>https://xpldotjs.github.io/posts/my-diary/</guid>
+      <description></description>
+    </item>
+    
     <item>
       <title>N1CTF 2020 Escape</title>
       <link>https://xpldotjs.github.io/posts/n1ctf-2020-escape/</link>
       <pubDate>Wed, 15 Sep 2021 00:44:03 +0545</pubDate>
       
       <guid>https://xpldotjs.github.io/posts/n1ctf-2020-escape/</guid>
-      <description>Setup Patch diff --git a/src/compiler/escape-analysis.cc b/src/compiler/escape-analysis.cc index 2a096b6933..3046d7b04e 100644 --- a/src/compiler/escape-analysis.cc +++ b/src/compiler/escape-analysis.cc @@ -178,7 +178,7 @@ class EscapeAnalysisTracker : public ZoneObject {  : VariableTracker::Scope(&amp;amp;tracker-&amp;gt;variable_states_, node, reduction), tracker_(tracker), reducer_(reducer) {} - const VirtualObject* GetVirtualObject(Node* node) { + VirtualObject* GetVirtualObject(Node* node) {  VirtualObject* vobject = tracker_-&amp;gt;virtual_objects_.Get(node); if (vobject) vobject-&amp;gt;AddDependency(current_node()); return vobject; @@ -576,10 +576,14 @@ void ReduceNode(const Operator* op, EscapeAnalysisTracker::Scope* current,  case IrOpcode::kStoreField: { Node* object = current-&amp;gt;ValueInput(0); Node* value = current-&amp;gt;ValueInput(1); - const VirtualObject* vobject = current-&amp;gt;GetVirtualObject(object); + VirtualObject* vobject = current-&amp;gt;GetVirtualObject(object);  Variable var; if (vobject &amp;amp;&amp;amp; !</description>
+      <description>Overview Setup Patch diff --git a/src/compiler/escape-analysis.cc b/src/compiler/escape-analysis.cc index 2a096b6933..3046d7b04e 100644 --- a/src/compiler/escape-analysis.cc +++ b/src/compiler/escape-analysis.cc @@ -178,7 +178,7 @@ class EscapeAnalysisTracker : public ZoneObject {  : VariableTracker::Scope(&amp;amp;tracker-&amp;gt;variable_states_, node, reduction), tracker_(tracker), reducer_(reducer) {} - const VirtualObject* GetVirtualObject(Node* node) { + VirtualObject* GetVirtualObject(Node* node) {  VirtualObject* vobject = tracker_-&amp;gt;virtual_objects_.Get(node); if (vobject) vobject-&amp;gt;AddDependency(current_node()); return vobject; @@ -576,10 +576,14 @@ void ReduceNode(const Operator* op, EscapeAnalysisTracker::Scope* current,  case IrOpcode::kStoreField: { Node* object = current-&amp;gt;ValueInput(0); Node* value = current-&amp;gt;ValueInput(1); - const VirtualObject* vobject = current-&amp;gt;GetVirtualObject(object); + VirtualObject* vobject = current-&amp;gt;GetVirtualObject(object);  Variable var; if (vobject &amp;amp;&amp;amp; !</description>
     </item>
     
     <item>
