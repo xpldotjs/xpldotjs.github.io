@@ -69,7 +69,7 @@
   <title>clock</title>
   <circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline>
 </svg>
-          1 min read
+          2 min read
         </div>
         <div>
           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tag">
@@ -95,8 +95,27 @@ You should be able to get it working again, reverse engineer it, and acquire the
 <p><img src="/posts/static/flareon7-002-garbage/002-hxd-view.png" alt="hxd"></p>
 <p>Then i opened the binary with CFF explorer, i noticed both <code>Import Directory RVA</code> and <code>Relocation Directory RVA</code> were invalid.
 <img src="/posts/static/flareon7-002-garbage/004-invalid-directories.png" alt="invalid-RVA"></p>
-<p>Then in the dependencies walker section</p>
-
+<p>Then in the dependency walker section i saw that the File size is less than the PE size. File size and the PE size must be equal, so i calculated the number of missing bytes and found out that the 732 bytes were missing.</p>
+<p><img src="/posts/static/flareon7-002-garbage/003-missing-bytes.png" alt="missing-bytes"></p>
+<p>So to fix this issue, i added 732 null<code>(00)</code> bytes to the bottom of the binary.</p>
+<p><img src="/posts/static/flareon7-002-garbage/005-bytes-added.png" alt="adding-zeros"></p>
+<p>Then i tried to unpack the binary with <code>upx unpacker</code> this time it successfully unpacked the binary.</p>
+<p><img src="/posts/static/flareon7-002-garbage/006-unpacked.png" alt="unpacked"></p>
+<p>However, if i try to run unpacked binary it&rsquo;ll not run instead it&rsquo;ll throw error message <code>side-by-side configuration is incorrect</code>.</p>
+<p><img src="/posts/static/flareon7-002-garbage/007-side-by-side-conf-incorrect.png" alt="side-by-side-err"></p>
+<p>This is because the resource is not complete. If we recall, we applied null bytes to fixed the size of binary not the original metadata. To fix this we can simply remove the incomplete resource.</p>
+<p><img src="/posts/static/flareon7-002-garbage/008-incomplete-conf.png" alt="incomplete-conf"></p>
+<p>The <code>side-by-side configuration</code> error was solved but the new error appeared. It didn&rsquo;t find the correct dll to run the program.</p>
+<p><img src="/posts/static/flareon7-002-garbage/009-dll-not-found.png" alt="dll-not-found"></p>
+<p>If we look into the <code>Import Directory</code> section, we can see the module names are missing.</p>
+<p><img src="/posts/static/flareon7-002-garbage/010-missing-module-name.png" alt="dll-not-found"></p>
+<p>By looking at the function list i assume the first one is <code>kernel32.dll</code> and second one is <code>shell32.dll</code>.</p>
+<p><img src="/posts/static/flareon7-002-garbage/011-fixed-module-name.png" alt="fixed-module-names"></p>
+<p>Now if i save and try to run the program it&rsquo;ll popup the messagebox with the flag.</p>
+<p><img src="/posts/static/flareon7-002-garbage/012-flag.png" alt="fixed-module-names"></p>
+<h4 id="flag">Flag</h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-Plain" data-lang="Plain">C0rruptGarbag3@flare-on.com
+</code></pre></div>
     </div>
     <div class="post-footer">
       
